@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "repo_email_idx" ON "subscriptions" ("email","repository");

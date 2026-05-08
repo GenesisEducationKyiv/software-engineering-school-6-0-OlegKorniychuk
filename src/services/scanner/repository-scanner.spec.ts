@@ -24,7 +24,7 @@ describe('RepositoryScanner', () => {
     status: number,
     message: string,
     headers = new Map<string, string>(),
-  ): GithubApiResponse<any> => ({
+  ): GithubApiResponse<never> => ({
     error: {
       status,
       message,
@@ -64,10 +64,11 @@ describe('RepositoryScanner', () => {
 
       try {
         await scanner.verifyRepository('invalid', 'repo');
-      } catch (err: any) {
-        expect(err).toBeInstanceOf(GithubApiError);
-        expect(err.type).toBe(GithubApiErrorTypesEnum.notFound);
-        expect(err.details.entity).toBe('repository');
+      } catch (err) {
+        const error = err as GithubApiError;
+        expect(error).toBeInstanceOf(GithubApiError);
+        expect(error.type).toBe(GithubApiErrorTypesEnum.notFound);
+        expect(error.details.entity).toBe('repository');
       }
     });
 
@@ -83,7 +84,8 @@ describe('RepositoryScanner', () => {
 
       try {
         await scanner.verifyRepository('golang', 'go');
-      } catch (error: any) {
+      } catch (err) {
+        const error = err as GithubApiError;
         expect(error).toBeInstanceOf(GithubApiError);
         expect(error.type).toBe(GithubApiErrorTypesEnum.rateLimitExceeded);
         expect(error.details.retryAfterMs).toBe(resetTimeEpoch * 1000);
@@ -97,9 +99,10 @@ describe('RepositoryScanner', () => {
 
       try {
         await scanner.verifyRepository('golang', 'go');
-      } catch (err: any) {
-        expect(err).toBeInstanceOf(GithubApiError);
-        expect(err.type).toBe(GithubApiErrorTypesEnum.other);
+      } catch (err) {
+        const error = err as GithubApiError;
+        expect(error).toBeInstanceOf(GithubApiError);
+        expect(error.type).toBe(GithubApiErrorTypesEnum.other);
       }
     });
   });

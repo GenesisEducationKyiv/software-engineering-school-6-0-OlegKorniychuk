@@ -24,13 +24,13 @@ export const routeCache = (
 
       const originalJson = res.json.bind(res);
 
-      res.json = ((body: unknown) => {
+      res.json = (body: unknown) => {
         cacheService.set(key, body, ttlSeconds).catch((err) => {
           console.error(`[Cache Error] Failed to set ${key}`, err);
         });
 
         return originalJson(body);
-      }) as any;
+      };
 
       next();
     } catch (error) {

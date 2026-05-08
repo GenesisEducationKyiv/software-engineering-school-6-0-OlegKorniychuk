@@ -9,6 +9,12 @@ import type { NotificationTokensService } from '../../services/notification-toke
 import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.js';
 import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.js';
 import type { CacheService } from '../../services/cache/cache.service.js';
+import type { GithubRepo } from '../../repositories/github-repo/github-repo.types.js';
+import type {
+  Subscription,
+  SubscriptionWithRepository,
+} from '../../repositories/subscription/subscription.types.js';
+import type { NotificationTokenPayload } from '../../services/notification-tokens-service/notification-tokens.types.js';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
@@ -77,10 +83,14 @@ describe('SubscriptionService', () => {
       mockGithubRepo.findByName.mockResolvedValueOnce({
         id: mockRepoId,
         name: mockRepoFullName,
-      } as any);
+        lastSeenTag: null,
+      } as GithubRepo);
       mockSubscriptionRepo.createOne.mockResolvedValueOnce({
         id: mockSubId,
-      } as any);
+        email: mockEmail,
+        githubRepositoryId: mockRepoId,
+        confirmed: false,
+      } as Subscription);
       mockTokensService.generateConfirmToken.mockReturnValueOnce(mockToken);
 
       await service.subscribe(mockEmail, mockOwner, mockRepoName);
@@ -106,10 +116,14 @@ describe('SubscriptionService', () => {
       mockGithubRepo.findByName.mockResolvedValueOnce({
         id: mockRepoId,
         name: mockRepoFullName,
-      } as any);
+        lastSeenTag: null,
+      } as GithubRepo);
       mockSubscriptionRepo.findOneByRepoAndEmail.mockResolvedValueOnce({
         id: mockSubId,
-      } as any);
+        email: mockEmail,
+        githubRepositoryId: mockRepoId,
+        confirmed: true,
+      } as Subscription);
 
       await expect(
         service.subscribe(mockEmail, mockOwner, mockRepoName),
@@ -133,10 +147,14 @@ describe('SubscriptionService', () => {
       mockGithubRepo.createOne.mockResolvedValueOnce({
         id: mockRepoId,
         name: mockRepoFullName,
-      } as any);
+        lastSeenTag: null,
+      } as GithubRepo);
       mockSubscriptionRepo.createOne.mockResolvedValueOnce({
         id: mockSubId,
-      } as any);
+        email: mockEmail,
+        githubRepositoryId: mockRepoId,
+        confirmed: false,
+      } as Subscription);
       mockTokensService.generateConfirmToken.mockReturnValueOnce(mockToken);
 
       await service.subscribe(mockEmail, mockOwner, mockRepoName);
@@ -173,11 +191,13 @@ describe('SubscriptionService', () => {
       mockTokensService.validateToken.mockReturnValueOnce({
         subscriptionId: mockSubId,
         type: NotificationTokenTypesEnum.confirm,
-      } as any);
+      } as NotificationTokenPayload);
       mockSubscriptionRepo.confirm.mockResolvedValueOnce({
         id: mockSubId,
+        email: 'test@example.com',
+        githubRepositoryId: 'repo-123',
         confirmed: true,
-      } as any);
+      } as Subscription);
 
       await service.confirmSubscription(mockToken);
 
@@ -205,7 +225,7 @@ describe('SubscriptionService', () => {
       mockTokensService.validateToken.mockReturnValueOnce({
         subscriptionId: mockSubId,
         type: NotificationTokenTypesEnum.confirm,
-      } as any);
+      } as NotificationTokenPayload);
       mockSubscriptionRepo.confirm.mockResolvedValueOnce(null);
 
       await expect(
@@ -225,10 +245,13 @@ describe('SubscriptionService', () => {
       mockTokensService.validateToken.mockReturnValueOnce({
         subscriptionId: mockSubId,
         type: NotificationTokenTypesEnum.unsibscribe,
-      } as any);
+      } as NotificationTokenPayload);
       mockSubscriptionRepo.deleteOne.mockResolvedValueOnce({
         id: mockSubId,
-      } as any);
+        email: 'test@example.com',
+        githubRepositoryId: 'repo-123',
+        confirmed: true,
+      } as Subscription);
 
       await service.unsubscribe(mockToken);
 
@@ -254,7 +277,7 @@ describe('SubscriptionService', () => {
       mockTokensService.validateToken.mockReturnValueOnce({
         subscriptionId: mockSubId,
         type: NotificationTokenTypesEnum.unsibscribe,
-      } as any);
+      } as NotificationTokenPayload);
       mockSubscriptionRepo.deleteOne.mockResolvedValueOnce(null);
 
       await expect(service.unsubscribe(mockToken)).rejects.toMatchObject({
@@ -268,20 +291,32 @@ describe('SubscriptionService', () => {
     const mockEmail = 'test@example.com';
 
     it('should return an array of subscriptions with repository data', async () => {
-      const mockSubscriptions = [
+      const mockSubscriptions: SubscriptionWithRepository[] = [
         {
           id: 'sub-1',
           email: mockEmail,
-          githubRepository: { id: 'repo-1', name: 'golang/go' },
+          githubRepositoryId: 'repo-1',
+          confirmed: true,
+          githubRepository: {
+            id: 'repo-1',
+            name: 'golang/go',
+            lastSeenTag: null,
+          },
         },
         {
           id: 'sub-2',
           email: mockEmail,
-          githubRepository: { id: 'repo-2', name: 'facebook/react' },
+          githubRepositoryId: 'repo-2',
+          confirmed: true,
+          githubRepository: {
+            id: 'repo-2',
+            name: 'facebook/react',
+            lastSeenTag: null,
+          },
         },
       ];
       mockSubscriptionRepo.findByEmailWithRepo.mockResolvedValueOnce(
-        mockSubscriptions as any,
+        mockSubscriptions,
       );
 
       const result = await service.getSubscriptions(mockEmail);

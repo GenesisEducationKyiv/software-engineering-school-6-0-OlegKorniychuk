@@ -19,7 +19,12 @@ const compat = new FlatCompat({
 });
 
 export default defineConfig([
-  globalIgnores(['**/jest.config.ts', '**/drizzle.config.ts', '**/dist', 'eslint.config.js']),
+  globalIgnores([
+    '**/jest.config.ts',
+    '**/drizzle.config.ts',
+    '**/dist',
+    'eslint.config.js',
+  ]),
   js.configs.recommended,
   ...compat.extends('plugin:@typescript-eslint/recommended'),
   security.configs.recommended,
@@ -55,7 +60,7 @@ export default defineConfig([
 
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
 
       '@typescript-eslint/explicit-member-accessibility': [

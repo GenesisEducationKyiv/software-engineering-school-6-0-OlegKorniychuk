@@ -34,8 +34,8 @@ startServer(app, scannerCron)
       isShuttingDown = true;
       console.log(`\n${signal} received. Server shutting down...`);
 
-      server.close(async (err: any) => {
-        if (err && err.code !== 'ERR_SERVER_NOT_RUNNING') {
+      server.close(async (err) => {
+        if (err) {
           console.error('Error closing Express server:', err);
           process.exit(1);
         }

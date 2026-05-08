@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from '@jest/globals';
 import jwt from 'jsonwebtoken';
 import { NotificationTokensService } from './notification-tokens.service.js';
 import { NotificationTokenTypesEnum } from './token-types.enum.js';
+import type { NotificationTokenPayload } from './notification-tokens.types.js';
 
 describe('NotificationTokensService', () => {
   const testSecret = 'super-secret-test-key';
@@ -15,7 +16,10 @@ describe('NotificationTokensService', () => {
     it('should generate a valid JWT with a 1-day expiration', () => {
       const token = service.generateConfirmToken('sub-123');
 
-      const decoded = jwt.verify(token, testSecret) as any;
+      const decoded = jwt.verify(
+        token,
+        testSecret,
+      ) as NotificationTokenPayload & { exp: number };
 
       expect(decoded.subscriptionId).toBe('sub-123');
       expect(decoded.type).toBe(NotificationTokenTypesEnum.confirm);
@@ -27,11 +31,11 @@ describe('NotificationTokensService', () => {
     it('should generate a valid JWT with an infinite lifetime', () => {
       const token = service.generateUnsubscribeToken('sub-456');
 
-      const decoded = jwt.verify(token, testSecret) as any;
+      const decoded = jwt.verify(token, testSecret) as NotificationTokenPayload;
 
       expect(decoded.subscriptionId).toBe('sub-456');
       expect(decoded.type).toBe(NotificationTokenTypesEnum.unsibscribe);
-      expect(decoded.exp).toBeUndefined();
+      expect((decoded as { exp?: number }).exp).toBeUndefined();
     });
   });
 

@@ -16,6 +16,11 @@ import { EmailNotifierStrategy } from './services/notifier/email.strategy.js';
 import { NodemailerClient } from './services/notifier/nodemailer-client.js';
 import { GithubApiImplementation } from './services/scanner/github-api.js';
 import { RepositoryScannerImplementation } from './services/scanner/repository-scanner.service.js';
+import { JobTypesEnum } from './services/email-queue/job-types.enum.js';
+import type {
+  SendConfirmationEmailPayload,
+  SendNotificationEmailPayload,
+} from './services/email-queue/email-queue.service.interface.js';
 
 // Repositories & APIs
 const subscriptionRepository = new SubscriptionRepositoryImplementation(
@@ -66,7 +71,23 @@ const scanRunner = new ScanRunner(
 );
 
 export const scannerCron = new ScannerCron(redisConnection, scanRunner);
-export const emailWorker = new EmailWorker(redisConnection, notifier);
+
+export const emailWorker = new EmailWorker(redisConnection);
+
+emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
+  const data = job.data as SendConfirmationEmailPayload;
+  await notifier.sendSubscriptionConfirmation(data.email, data.token);
+});
+
+emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
+  const data = job.data as SendNotificationEmailPayload;
+  await notifier.sendNotification(
+    [data.email],
+    data.repo,
+    data.release,
+    data.token,
+  );
+});
 
 export const shutdownDependencies = async () => {
   console.log('Closing background workers and queues...');

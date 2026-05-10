@@ -12,6 +12,7 @@ import {
 } from './dependencies-container.js';
 import { routeCache } from './services/cache/cache.middleware.js';
 import { requireApiKey } from './auth/api-key.middleware.js';
+import { parseRepositoryString } from './modules/subscription/parse-repository.middleware.js';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router
   .route('/subscribe')
   .post(
     validateRequest(subscribeSchema),
+    parseRepositoryString,
     subscriptionController.subscribe.bind(subscriptionController),
   );
 

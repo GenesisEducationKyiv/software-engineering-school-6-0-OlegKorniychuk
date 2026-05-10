@@ -1,57 +1,38 @@
 import type { GithubRepoRepository } from '../repositories/github-repo/github-repo.repository.interface.js';
-import type { SubscriptionRepository } from '../repositories/subscription/subscription.repository.interface.js';
-import type { EmailQueueClient } from '../services/email-queue/email-queue.service.interface.js';
-import type { NotificationTokensService } from '../services/notification-tokens-service/notification-tokens.service.interface.js';
-import type { RepositoryScanner } from '../services/scanner/repository-scanner.service.interface.js';
+import type { ReleaseCheckerService } from '../services/scanner/release-checker.service.interface.js';
+import type { NotificationDispatcher } from '../services/notifier/notification-dispatcher.interface.js';
 
 export class ScanRunner {
   constructor(
     private readonly githubRepoRepository: GithubRepoRepository,
-    private readonly subscriptionRepo: SubscriptionRepository,
-    private readonly repoScanner: RepositoryScanner,
-    private readonly tokensService: NotificationTokensService,
-    private readonly emailQueue: EmailQueueClient,
+    private readonly releaseChecker: ReleaseCheckerService,
+    private readonly notificationDispatcher: NotificationDispatcher,
   ) {}
 
   public async runPeriodicScan(): Promise<void> {
     console.log('[Scanner]: Starting periodic release scan...');
 
     const repos = await this.githubRepoRepository.findAll();
-    let emailsQueued = 0;
+    let totalEmailsQueued = 0;
 
     for (const repo of repos) {
       try {
-        const [owner, repoName] = repo.name.split('/');
+        const newReleaseTag =
+          await this.releaseChecker.checkAndUpdateRelease(repo);
 
-        const latestRelease = await this.repoScanner.getLatestRelease(
-          owner!,
-          repoName!,
-        );
-
-        if (latestRelease && latestRelease.tag_name !== repo.lastSeenTag) {
+        if (newReleaseTag) {
           console.log(
-            `[Scanner]: Found new release for ${repo.name}: ${latestRelease.tag_name}`,
+            `[Scanner]: Found new release for ${repo.name}: ${newReleaseTag}`,
           );
 
-          await this.githubRepoRepository.updateTag(
-            repo.id,
-            latestRelease.tag_name,
-          );
+          const queuedCount =
+            await this.notificationDispatcher.dispatchNotifications(
+              repo.id,
+              repo.name,
+              newReleaseTag,
+            );
 
-          const subscriptions =
-            await this.subscriptionRepo.findConfirmedByRepoId(repo.id);
-
-          for (const sub of subscriptions) {
-            const token = this.tokensService.generateUnsubscribeToken(sub.id);
-
-            await this.emailQueue.queueNotificationEmail({
-              email: sub.email,
-              token: token,
-              repo: repo.name,
-              release: latestRelease.tag_name,
-            });
-            emailsQueued++;
-          }
+          totalEmailsQueued += queuedCount;
         }
       } catch (error) {
         console.error(`[Scanner]: Failed to check ${repo.name}`, error);
@@ -59,7 +40,7 @@ export class ScanRunner {
     }
 
     console.log(
-      `[Scanner]: Scan complete. Queued ${emailsQueued} individual notification emails.`,
+      `[Scanner]: Scan complete. Queued ${totalEmailsQueued} individual notification emails.`,
     );
   }
 }

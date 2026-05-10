@@ -16,6 +16,8 @@ import { EmailNotifierStrategy } from './services/notifier/email.strategy.js';
 import { NodemailerClient } from './services/notifier/nodemailer-client.js';
 import { GithubApiImplementation } from './services/scanner/github-api.js';
 import { RepositoryScannerImplementation } from './services/scanner/repository-scanner.service.js';
+import { ReleaseCheckerServiceImplementation } from './services/scanner/release-checker.service.js';
+import { NotificationDispatcherImplementation } from './services/notifier/notification-dispatcher.js';
 import { JobTypesEnum } from './services/email-queue/job-types.enum.js';
 import type {
   SendConfirmationEmailPayload,
@@ -44,6 +46,17 @@ const mailClient = new NodemailerClient(
 const notifier = new EmailNotifierStrategy(mailClient, 'http://localhost:3000');
 const emailQueue = new EmailQueueClientImplementation(redisConnection);
 
+// New Services for ScanRunner
+const releaseChecker = new ReleaseCheckerServiceImplementation(
+  githubRepoRepository,
+  repoScanner,
+);
+const notificationDispatcher = new NotificationDispatcherImplementation(
+  subscriptionRepository,
+  tokensService,
+  emailQueue,
+);
+
 // Services & Controllers
 export const cacheService = new CacheServiceImplementation(redisConnection);
 
@@ -64,10 +77,8 @@ export const subscriptionController = new SubscriptionController(
 // Background Jobs
 const scanRunner = new ScanRunner(
   githubRepoRepository,
-  subscriptionRepository,
-  repoScanner,
-  tokensService,
-  emailQueue,
+  releaseChecker,
+  notificationDispatcher,
 );
 
 export const scannerCron = new ScannerCron(redisConnection, scanRunner);

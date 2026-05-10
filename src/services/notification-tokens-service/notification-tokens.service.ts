@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
 import type { NotificationTokenPayload } from './notification-tokens.types.js';
 import { NotificationTokenTypesEnum } from './token-types.enum.js';
+import type { NotificationTokensService } from './notification-tokens.service.interface.js';
 
-export class NotificationTokensService {
+export class NotificationTokensServiceImplementation implements NotificationTokensService {
   constructor(private readonly tokenSecret: string) {}
 
   public generateConfirmToken(subscriptionId: string) {

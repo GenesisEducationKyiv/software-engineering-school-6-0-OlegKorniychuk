@@ -2,20 +2,13 @@ import { Queue } from 'bullmq';
 import type { Redis } from 'ioredis';
 import { Queues } from './queues.enum.js';
 import { JobTypesEnum } from './job-types.enum.js';
+import type {
+  EmailQueueClient,
+  SendConfirmationEmailPayload,
+  SendNotificationEmailPayload,
+} from './email-queue.service.interface.js';
 
-export interface SendConfirmationEmailPayload {
-  email: string;
-  token: string;
-}
-
-export interface SendNotificationEmailPayload {
-  email: string;
-  token: string;
-  repo: string;
-  release: string;
-}
-
-export class EmailQueueClient {
+export class EmailQueueClientImplementation implements EmailQueueClient {
   public readonly queue: Queue;
 
   constructor(redisConnection: Redis) {

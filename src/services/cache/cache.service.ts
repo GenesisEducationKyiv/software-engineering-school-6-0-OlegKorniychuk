@@ -1,6 +1,7 @@
 import type { Redis } from 'ioredis';
+import type { CacheService } from './cache.service.interface.js';
 
-export class CacheService {
+export class CacheServiceImplementation implements CacheService {
   constructor(private readonly redis: Redis) {}
 
   public async get<T>(key: string): Promise<T | null> {

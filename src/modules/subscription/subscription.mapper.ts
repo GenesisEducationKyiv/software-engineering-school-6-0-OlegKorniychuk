@@ -1,4 +1,4 @@
-import type { SubscriptionWithRepository } from '../../repositories/subscription/subscription.types.js';
+import type { SubscriptionWithRepository } from '../../repositories/subscription/subscription.repository.interface.js';
 import type { SubscriptionResponse } from './subscription.types.js';
 
 export interface SubscriptionResponseMapper {

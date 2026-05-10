@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
-import { RepositoryScanner } from './repository-scanner.service.js';
+import { RepositoryScannerImplementation } from './repository-scanner.service.js';
 import {
   GithubApiError,
   GithubApiErrorTypesEnum,
@@ -12,7 +12,7 @@ import type {
 } from './github.types.js';
 
 describe('RepositoryScanner', () => {
-  let scanner: RepositoryScanner;
+  let scanner: RepositoryScannerImplementation;
   let mockGithubApi: jest.Mocked<GithubApi>;
 
   const mockSuccess = <T>(data: T): GithubApiResponse<T> => ({
@@ -43,7 +43,7 @@ describe('RepositoryScanner', () => {
       getLatestRepositoryRelease: jest.fn(),
     } as unknown as jest.Mocked<GithubApi>;
 
-    scanner = new RepositoryScanner(mockGithubApi);
+    scanner = new RepositoryScannerImplementation(mockGithubApi);
   });
 
   describe('verifyRepository', () => {

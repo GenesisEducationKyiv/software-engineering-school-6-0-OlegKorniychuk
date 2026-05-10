@@ -2,8 +2,12 @@ import { and, eq } from 'drizzle-orm';
 import type { DrizzleClient } from '../../db/client.js';
 import { subscriptions } from '../../db/schema/subscriptions.js';
 import type { CreateSubscription, Subscription } from './subscription.types.js';
+import type {
+  SubscriptionRepository,
+  SubscriptionWithRepository,
+} from './subscription.repository.interface.js';
 
-export class SubscriptionRepository {
+export class SubscriptionRepositoryImplementation implements SubscriptionRepository {
   constructor(private readonly db: DrizzleClient) {}
 
   public async createOne(data: CreateSubscription): Promise<Subscription> {
@@ -25,11 +29,13 @@ export class SubscriptionRepository {
     return result || null;
   }
 
-  public async findByEmailWithRepo(email: string) {
-    return await this.db.query.subscriptions.findMany({
+  public async findByEmailWithRepo(
+    email: string,
+  ): Promise<SubscriptionWithRepository[]> {
+    return (await this.db.query.subscriptions.findMany({
       where: { email },
       with: { githubRepository: true },
-    });
+    })) as SubscriptionWithRepository[];
   }
 
   public async findOneByRepoAndEmail(

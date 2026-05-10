@@ -3,7 +3,7 @@ import type { Redis } from 'ioredis';
 import type {
   SendConfirmationEmailPayload,
   SendNotificationEmailPayload,
-} from './email-queue.service.js';
+} from './email-queue.service.interface.js';
 import type { NotifierStrategy } from '../notifier/notifier.strategy.js';
 import { Queues } from './queues.enum.js';
 import { JobTypesEnum } from './job-types.enum.js';

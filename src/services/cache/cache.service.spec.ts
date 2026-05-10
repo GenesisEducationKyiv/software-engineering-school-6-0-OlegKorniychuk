@@ -1,9 +1,9 @@
-import { describe, expect, it, beforeEach, jest } from '@jest/globals';
-import { CacheService } from './cache.service.js';
+import { jest, describe, expect, it, beforeEach } from '@jest/globals';
+import { CacheServiceImplementation } from './cache.service.js';
 import type { Redis } from 'ioredis';
 
 describe('CacheService', () => {
-  let cacheService: CacheService;
+  let cacheService: CacheServiceImplementation;
   let mockRedis: jest.Mocked<Redis>;
 
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('CacheService', () => {
       del: jest.fn(),
     } as unknown as jest.Mocked<Redis>;
 
-    cacheService = new CacheService(mockRedis);
+    cacheService = new CacheServiceImplementation(mockRedis);
 
     jest.spyOn(console, 'error').mockImplementation(() => {});
   });

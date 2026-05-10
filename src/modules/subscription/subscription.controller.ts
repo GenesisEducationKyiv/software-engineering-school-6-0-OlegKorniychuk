@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { SubscriptionService } from './subscription.service.js';
+import type { SubscriptionService } from './subscription.service.interface.js';
 import type {
   SubscriptionTokenInput,
   SubscribeInput,

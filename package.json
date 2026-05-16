@@ -5,7 +5,7 @@
   "description": "An api that lets users subscribe to email notifications about github repo releases",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/migrate.js && node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "migration:generate": "drizzle-kit generate --config drizzle.config.ts",

@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub Release Notifier</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 600px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        color: #333;
+        background: #f9fafb;
+      }
+      .card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+      input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      button {
+        background: #2563eb;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+        width: 100%;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      #message {
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 4px;
+        display: none;
+        word-wrap: break-word;
+      }
+      .success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+      .error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+      ul {
+        padding-left: 1.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>GitHub Release Notifier</h1>
+
+    <div class="card">
+      <div class="form-group">
+        <label for="apiKey">API Key (Required)</label>
+        <input
+          type="password"
+          id="apiKey"
+          placeholder="Enter your x-api-key"
+          value="secret-api-key"
+        />
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Subscribe</h2>
+      <form id="subscribeForm">
+        <div class="form-group">
+          <label for="subEmail">Email Address</label>
+          <input
+            type="email"
+            id="subEmail"
+            required
+            placeholder="you@example.com"
+          />
+        </div>
+        <div class="form-group">
+          <label for="subRepo">GitHub Repository</label>
+          <input
+            type="text"
+            id="subRepo"
+            required
+            placeholder="e.g., golang/go"
+          />
+        </div>
+        <button type="submit">Subscribe to Releases</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>My Subscriptions</h2>
+      <form id="viewForm">
+        <div class="form-group">
+          <label for="viewEmail">Email Address</label>
+          <input
+            type="email"
+            id="viewEmail"
+            required
+            placeholder="you@example.com"
+          />
+        </div>
+        <button type="submit">View Subscriptions</button>
+      </form>
+      <div id="subscriptionsList"></div>
+    </div>
+
+    <div id="message"></div>
+
+    <script>
+      const apiKeyInput = document.getElementById('apiKey');
+      const messageDiv = document.getElementById('message');
+      const subsListDiv = document.getElementById('subscriptionsList');
+
+      function showMessage(msg, isError = false) {
+        messageDiv.style.display = 'block';
+        messageDiv.className = isError ? 'error' : 'success';
+        messageDiv.textContent = msg;
+      }
+
+      // Handle Subscription
+      document
+        .getElementById('subscribeForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('subEmail').value;
+          const repository = document.getElementById('subRepo').value;
+
+          try {
+            const response = await fetch('/subscribe', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': apiKeyInput.value,
+              },
+              body: JSON.stringify({ email, repo: repository }),
+            });
+
+            const data = await response.json();
+            if (!response.ok)
+              throw new Error(
+                data.message || data.error || 'Failed to subscribe',
+              );
+
+            showMessage(
+              'Successfully subscribed! Please check your email to confirm.',
+            );
+            document.getElementById('subRepo').value = ''; // Clear repo field
+          } catch (err) {
+            showMessage(err.message, true);
+          }
+        });
+
+      // Handle Viewing Subscriptions
+      document
+        .getElementById('viewForm')
+        .addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('viewEmail').value;
+          subsListDiv.innerHTML = 'Loading...';
+
+          try {
+            const response = await fetch(
+              `/subscriptions?email=${encodeURIComponent(email)}`,
+              {
+                headers: { 'x-api-key': apiKeyInput.value },
+              },
+            );
+
+            const data = await response.json();
+            if (!response.ok)
+              throw new Error(data.message || data.error || 'Failed to fetch');
+
+            if (data.length === 0) {
+              subsListDiv.innerHTML =
+                '<p>No active subscriptions found for this email.</p>';
+              return;
+            }
+
+            let html = '<ul>';
+            data.forEach((sub) => {
+              const status = sub.confirmed ? '✅ Confirmed' : '⏳ Pending';
+              html += `<li><strong>${sub.repo}</strong> (${status})</li>`;
+            });
+            html += '</ul>';
+            subsListDiv.innerHTML = html;
+            messageDiv.style.display = 'none';
+          } catch (err) {
+            subsListDiv.innerHTML = '';
+            showMessage(err.message, true);
+          }
+        });
+    </script>
+  </body>
+</html>

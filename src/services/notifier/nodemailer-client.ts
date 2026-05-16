@@ -1,17 +1,27 @@
 import nodemailer from 'nodemailer';
+import type { TransportOptions } from 'nodemailer';
 import type { MailClient, SendMailOptions } from './mail-client.types.js';
+
+export type NodemailerConfig = {
+  auth: {
+    user: string;
+    pass: string;
+  };
+} & (
+  | {
+      service: string;
+    }
+  | {
+      host: string;
+      port: number;
+    }
+);
 
 export class NodemailerClient implements MailClient {
   private transporter: nodemailer.Transporter;
 
-  constructor(service: string, user: string, pass: string) {
-    this.transporter = nodemailer.createTransport({
-      service,
-      auth: {
-        user,
-        pass,
-      },
-    });
+  constructor(config: NodemailerConfig) {
+    this.transporter = nodemailer.createTransport(config as TransportOptions);
   }
 
   public async sendMail(options: SendMailOptions): Promise<void> {

@@ -33,14 +33,18 @@ const githubApi = new GithubApiImplementation(env.GITHUB_TOKEN);
 const repoScanner = new RepositoryScannerImplementation(githubApi);
 
 // Utilities & Clients
-const tokensService = new NotificationTokensServiceImplementation(
+export const tokensService = new NotificationTokensServiceImplementation(
   env.NOTIFICATION_TOKEN_SECRET,
 );
-const mailClient = new NodemailerClient(
-  env.EMAIL_SERVICE,
-  env.EMAIL_SERVICE_USERNAME,
-  env.EMAIL_SERVICE_PASSWORD,
-);
+const mailClient = new NodemailerClient({
+  auth: {
+    user: env.EMAIL_SERVICE_USERNAME,
+    pass: env.EMAIL_SERVICE_PASSWORD,
+  },
+  ...('EMAIL_SERVICE' in env
+    ? { service: env.EMAIL_SERVICE }
+    : { host: env.EMAIL_HOST, port: env.EMAIL_PORT }),
+});
 const notifier = new EmailNotifierStrategy(mailClient, 'http://localhost:3000');
 const emailQueue = new EmailQueueClientImplementation(redisConnection);
 

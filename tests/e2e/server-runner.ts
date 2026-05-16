@@ -22,15 +22,18 @@ const server = setupServer(
       tag_name: 'v1.0.0',
     });
   }),
-  http.get('https://api.github.com/repos/:owner/:repo/releases/latest', ({ params }) => {
-    const { owner } = params;
-    if (owner === 'nonexistent') {
-      return new HttpResponse(null, { status: 404 });
-    }
-    return HttpResponse.json({
-      tag_name: 'v1.0.0',
-    });
-  })
+  http.get(
+    'https://api.github.com/repos/:owner/:repo/releases/latest',
+    ({ params }) => {
+      const { owner } = params;
+      if (owner === 'nonexistent') {
+        return new HttpResponse(null, { status: 404 });
+      }
+      return HttpResponse.json({
+        tag_name: 'v1.0.0',
+      });
+    },
+  ),
 );
 
 async function start() {
@@ -48,7 +51,7 @@ async function start() {
     .start();
 
   const dbUrl = pgContainer.getConnectionUri();
-  
+
   process.env.DATABASE_URL = dbUrl;
   process.env.REDIS_URL = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`;
   process.env.EMAIL_HOST = mailpitContainer.getHost();
@@ -64,7 +67,7 @@ async function start() {
 
   fs.writeFileSync(
     path.join(process.cwd(), '.env.e2e'),
-    `DATABASE_URL=${process.env.DATABASE_URL}\nMAILPIT_API_URL=${process.env.MAILPIT_API_URL}\nNOTIFICATION_TOKEN_SECRET=${process.env.NOTIFICATION_TOKEN_SECRET}`
+    `DATABASE_URL=${process.env.DATABASE_URL}\nMAILPIT_API_URL=${process.env.MAILPIT_API_URL}\nNOTIFICATION_TOKEN_SECRET=${process.env.NOTIFICATION_TOKEN_SECRET}`,
   );
 
   const migrationPool = new pg.Pool({ connectionString: dbUrl });
@@ -73,11 +76,13 @@ async function start() {
   await migrationPool.end();
 
   const deps = await import('../../src/dependencies-container.js');
-  deps.emailWorker.worker.run().catch(err => console.error('Worker run error:', err));
-  
+  deps.emailWorker.worker
+    .run()
+    .catch((err) => console.error('Worker run error:', err));
+
   const appModule = await import('../../src/app.js');
   const app = appModule.default;
-  
+
   app.listen(3002, () => {
     console.log('E2E Server listening on port 3002');
   });

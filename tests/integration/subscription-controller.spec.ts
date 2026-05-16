@@ -18,16 +18,7 @@ import { subscriptions } from '../../src/db/schema/subscriptions.js';
 import type { Express } from 'express';
 import type { NotificationTokensService } from '../../src/services/notification-tokens-service/notification-tokens.service.interface.js';
 import type { DrizzleClient } from '../../src/db/client.js';
-
-interface MailpitMessage {
-  Subject: string;
-  To: { Address: string }[];
-}
-
-interface MailpitMessagesResponse {
-  total: number;
-  messages: MailpitMessage[];
-}
+import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 
 // Mock GitHub API
 const server = setupServer(

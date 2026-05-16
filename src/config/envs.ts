@@ -6,7 +6,9 @@ const envSchema = z
     DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
     GITHUB_TOKEN: z.string().min(1, 'GITHUB_TOKEN is required'),
 
-    EMAIL_SERVICE_USERNAME: z.string().min(1, 'EMAIL_SERVICE_USERNAME is required'),
+    EMAIL_SERVICE_USERNAME: z
+      .string()
+      .min(1, 'EMAIL_SERVICE_USERNAME is required'),
     EMAIL_SERVICE_PASSWORD: z
       .string()
       .min(1, 'EMAIL_SERVICE_PASSWORD is required'),
@@ -24,7 +26,10 @@ const envSchema = z
       }),
       z.object({
         EMAIL_HOST: z.string().min(1, 'EMAIL_HOST is required'),
-        EMAIL_PORT: z.coerce.number().int().positive('EMAIL_PORT must be a positive integer'),
+        EMAIL_PORT: z.coerce
+          .number()
+          .int()
+          .positive('EMAIL_PORT must be a positive integer'),
       }),
     ]),
   );

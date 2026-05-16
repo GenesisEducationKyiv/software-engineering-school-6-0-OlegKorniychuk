@@ -4,8 +4,10 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
+import type { DrizzleClient } from '../../src/db/client.js';
+import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 
-let drizzleClient: any;
+let drizzleClient: DrizzleClient;
 let mailpitApiUrl: string;
 let pool: pg.Pool;
 
@@ -18,13 +20,14 @@ test.beforeAll(async () => {
       envFile = fs.readFileSync(envPath, 'utf-8');
       break;
     }
-    await new Promise(res => setTimeout(res, 1000));
+    await new Promise((res) => setTimeout(res, 1000));
   }
 
-  if (!envFile) throw new Error('.env.e2e file was not created by the server runner');
+  if (!envFile)
+    throw new Error('.env.e2e file was not created by the server runner');
 
   const envs: Record<string, string> = {};
-  envFile.split('\n').forEach(line => {
+  envFile.split('\n').forEach((line) => {
     const [key, ...vals] = line.split('=');
     if (key && vals.length) {
       envs[key] = vals.join('=');
@@ -43,11 +46,15 @@ test.afterAll(async () => {
 });
 
 test.beforeEach(async () => {
-  await drizzleClient.execute(sql`TRUNCATE TABLE subscriptions, github_repositories RESTART IDENTITY CASCADE`);
+  await drizzleClient.execute(
+    sql`TRUNCATE TABLE subscriptions, github_repositories RESTART IDENTITY CASCADE`,
+  );
   await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
 });
 
-test('should successfully subscribe, confirm, and list subscriptions', async ({ page }) => {
+test('should successfully subscribe, confirm, and list subscriptions', async ({
+  page,
+}) => {
   await page.goto('/');
 
   // Enter API Key
@@ -59,33 +66,39 @@ test('should successfully subscribe, confirm, and list subscriptions', async ({ 
   await page.click('button:has-text("Subscribe to Releases")');
 
   // Assert success message
-  await expect(page.locator('#message')).toHaveText('Successfully subscribed! Please check your email to confirm.', { timeout: 15000 });
+  await expect(page.locator('#message')).toHaveText(
+    'Successfully subscribed! Please check your email to confirm.',
+    { timeout: 15000 },
+  );
   await expect(page.locator('#message')).toHaveClass(/success/);
 
   // Check Mailpit for confirmation email
-  let mailData: any;
+  let mailData: MailpitMessagesResponse = { total: 0, messages: [] };
   for (let i = 0; i < 30; i++) {
     const mailResponse = await fetch(`${mailpitApiUrl}/api/v1/messages`);
-    mailData = await mailResponse.json();
+    mailData = (await mailResponse.json()) as MailpitMessagesResponse;
     if (mailData.total > 0) break;
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   expect(mailData.total).toBe(1);
-  const emailId = mailData.messages[0].ID;
+  const emailId = mailData.messages[0]!.ID;
 
   // Fetch email body to get confirmation link
-  const emailSourceResponse = await fetch(`${mailpitApiUrl}/api/v1/message/${emailId}`);
-  const emailSource = await emailSourceResponse.json();
+  const emailSourceResponse = await fetch(
+    `${mailpitApiUrl}/api/v1/message/${emailId}`,
+  );
+  const emailSource = (await emailSourceResponse.json()) as { HTML: string };
   const htmlBody = emailSource.HTML;
-  
+
   // Extract link
   const match = htmlBody.match(/href="([^"]+)"/);
   expect(match).toBeTruthy();
   const confirmLink = match![1];
+  expect(confirmLink).toBeDefined();
 
   // Navigate to confirmation link. Need to replace 3000 with 3002.
-  const localConfirmLink = confirmLink.replace('3000', '3002');
-  
+  const localConfirmLink = confirmLink!.replace('3000', '3002');
+
   const confirmRes = await page.request.get(localConfirmLink);
   expect(confirmRes.ok()).toBeTruthy();
   const confirmJson = await confirmRes.json();
@@ -99,7 +112,9 @@ test('should successfully subscribe, confirm, and list subscriptions', async ({ 
 
   // Assert subscription is in the list
   await expect(page.locator('#subscriptionsList')).toContainText('owner/repo');
-  await expect(page.locator('#subscriptionsList')).toContainText('✅ Confirmed');
+  await expect(page.locator('#subscriptionsList')).toContainText(
+    '✅ Confirmed',
+  );
 });
 
 test('should show error for non-existent repo', async ({ page }) => {
@@ -109,14 +124,20 @@ test('should show error for non-existent repo', async ({ page }) => {
   await page.fill('#subRepo', 'nonexistent/repo');
   await page.click('button:has-text("Subscribe to Releases")');
 
-  await expect(page.locator('#message')).toHaveClass(/error/, { timeout: 15000 });
+  await expect(page.locator('#message')).toHaveClass(/error/, {
+    timeout: 15000,
+  });
 });
 
-test('should show empty list for email with no subscriptions', async ({ page }) => {
+test('should show empty list for email with no subscriptions', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.fill('#apiKey', 'secret-api-key');
   await page.fill('#viewEmail', 'nobody@example.com');
   await page.click('button:has-text("View Subscriptions")');
 
-  await expect(page.locator('#subscriptionsList')).toContainText('No active subscriptions found for this email.');
+  await expect(page.locator('#subscriptionsList')).toContainText(
+    'No active subscriptions found for this email.',
+  );
 });

@@ -1,4 +1,4 @@
-import type { GithubRepoRepository } from '../../repositories/github-repo/github-repo.repository.interface.js';
+import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
@@ -17,7 +17,7 @@ import type { SubscriptionService } from './subscription.service.interface.js';
 export class SubscriptionServiceImplementation implements SubscriptionService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
-    private readonly githubRepoRepository: GithubRepoRepository,
+    private readonly githubRepoRepository: RepoRepository,
     private readonly repoScanner: RepositoryScanner,
     private readonly tokensService: NotificationTokensService,
     private readonly emailQueue: EmailQueueClient,

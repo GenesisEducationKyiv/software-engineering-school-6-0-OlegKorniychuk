@@ -6,7 +6,7 @@ import { SubscriptionController } from './modules/subscription/subscription.cont
 import { subscriptionMapper } from './modules/subscription/subscription.mapper.js';
 import { SubscriptionServiceImplementation } from './modules/subscription/subscription.service.js';
 import { redisConnection } from './redis/redis.js';
-import { GithubRepoRepositoryImplementation } from './repositories/github-repo/github-repo.repository.js';
+import { GithubRepoRepository } from './repositories/github-repo/github-repo.repository.js';
 import { SubscriptionRepositoryImplementation } from './repositories/subscription/subscription.repository.js';
 import { CacheServiceImplementation } from './services/cache/cache.service.js';
 import { EmailQueueClientImplementation } from './services/email-queue/email-queue.service.js';
@@ -28,9 +28,7 @@ import type {
 const subscriptionRepository = new SubscriptionRepositoryImplementation(
   drizzleClient,
 );
-const githubRepoRepository = new GithubRepoRepositoryImplementation(
-  drizzleClient,
-);
+const githubRepoRepository = new GithubRepoRepository(drizzleClient);
 const githubApi = new GithubApiImplementation(env.GITHUB_TOKEN);
 const repoScanner = new RepositoryScannerImplementation(githubApi);
 

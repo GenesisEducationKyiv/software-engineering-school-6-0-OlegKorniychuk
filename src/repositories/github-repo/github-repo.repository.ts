@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm';
 import type { DrizzleClient } from '../../db/client.js';
 import { githubRepositories } from '../../db/schema/repositories.js';
 import type { CreateGithubRepo, GithubRepo } from './github-repo.types.js';
-import type { GithubRepoRepository } from './github-repo.repository.interface.js';
+import type { RepoRepository } from '../repo-repository.interface.js';
 
-export class GithubRepoRepositoryImplementation implements GithubRepoRepository {
+export class GithubRepoRepository implements RepoRepository {
   constructor(private readonly db: DrizzleClient) {}
 
   public async findByName(name: string): Promise<GithubRepo | null> {

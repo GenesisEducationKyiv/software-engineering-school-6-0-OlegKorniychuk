@@ -1,10 +1,10 @@
-import type { GithubRepoRepository } from '../repositories/github-repo/github-repo.repository.interface.js';
+import type { RepoRepository } from '../repositories/repo-repository.interface.js';
 import type { ReleaseCheckerService } from '../services/scanner/release-checker.service.interface.js';
 import type { NotificationDispatcher } from '../services/notifier/notification-dispatcher.interface.js';
 
 export class ScanRunner {
   constructor(
-    private readonly githubRepoRepository: GithubRepoRepository,
+    private readonly githubRepoRepository: RepoRepository,
     private readonly releaseChecker: ReleaseCheckerService,
     private readonly notificationDispatcher: NotificationDispatcher,
   ) {}

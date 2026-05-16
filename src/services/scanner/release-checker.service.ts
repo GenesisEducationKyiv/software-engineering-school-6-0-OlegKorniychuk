@@ -1,11 +1,11 @@
-import type { GithubRepoRepository } from '../../repositories/github-repo/github-repo.repository.interface.js';
 import type { GithubRepo } from '../../repositories/github-repo/github-repo.types.js';
 import type { RepositoryScanner } from './repository-scanner.service.interface.js';
 import type { ReleaseCheckerService } from './release-checker.service.interface.js';
+import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
 
 export class ReleaseCheckerServiceImplementation implements ReleaseCheckerService {
   constructor(
-    private readonly githubRepoRepository: GithubRepoRepository,
+    private readonly githubRepoRepository: RepoRepository,
     private readonly repoScanner: RepositoryScanner,
   ) {}
 

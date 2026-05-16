@@ -3,7 +3,7 @@ import { SubscriptionServiceImplementation } from './subscription.service.js';
 import { AppErrorTypesEnum } from '../../utils/error-handling/errors/app.error.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
 
-import type { GithubRepoRepository } from '../../repositories/github-repo/github-repo.repository.interface.js';
+import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
@@ -20,7 +20,7 @@ describe('SubscriptionService', () => {
   let service: SubscriptionServiceImplementation;
 
   let mockSubscriptionRepo: jest.Mocked<SubscriptionRepository>;
-  let mockGithubRepo: jest.Mocked<GithubRepoRepository>;
+  let mockGithubRepo: jest.Mocked<RepoRepository>;
   let mockRepoScanner: jest.Mocked<RepositoryScanner>;
   let mockTokensService: jest.Mocked<NotificationTokensService>;
   let mockEmailQueue: jest.Mocked<EmailQueueClient>;
@@ -38,7 +38,7 @@ describe('SubscriptionService', () => {
     mockGithubRepo = {
       findByName: jest.fn(),
       createOne: jest.fn(),
-    } as unknown as jest.Mocked<GithubRepoRepository>;
+    } as unknown as jest.Mocked<RepoRepository>;
 
     mockRepoScanner = {
       verifyRepository: jest.fn(),

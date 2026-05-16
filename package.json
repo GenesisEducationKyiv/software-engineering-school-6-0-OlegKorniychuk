@@ -10,9 +10,10 @@
     "dev": "tsx watch src/server.ts",
     "migration:generate": "drizzle-kit generate --config drizzle.config.ts",
     "migration:migrate": "drizzle-kit migrate --config drizzle.config.ts",
-    "test": "npm run test:unit && npm run test:integration",
+    "test": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:unit": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest src/",
     "test:integration": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest tests/integration/",
+    "test:e2e": "cross-env NODE_ENV=test playwright test",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --check 'src/**/*.{ts,tsx,json,md}'"
   },
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@testcontainers/redis": "^11.14.0",
     "@types/dotenv": "^6.1.1",
@@ -59,7 +61,7 @@
     "supertest": "^7.2.2",
     "testcontainers": "^11.14.0",
     "ts-jest": "^29.4.9",
-    "tsx": "^4.21.0",
+    "tsx": "^4.22.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.59.2"
   },

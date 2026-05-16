@@ -1,20 +1,23 @@
-import type { GithubRepoRepository } from '../../repositories/github-repo/github-repo.repository.js';
-import type { SubscriptionRepository } from '../../repositories/subscription/subscription.repository.js';
-import type { SubscriptionWithRepository } from '../../repositories/subscription/subscription.types.js';
-import type { CacheService } from '../../services/cache/cache.service.js';
-import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.js';
-import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.js';
+import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
+import type {
+  SubscriptionRepository,
+  SubscriptionWithRepository,
+} from '../../repositories/subscription/subscription.repository.interface.js';
+import type { CacheService } from '../../services/cache/cache.service.interface.js';
+import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.ts';
+import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
-import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.js';
+import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.interface.js';
 import {
   AppError,
   AppErrorTypesEnum,
 } from '../../utils/error-handling/errors/app.error.js';
+import type { SubscriptionService } from './subscription.service.interface.js';
 
-export class SubscriptionService {
+export class SubscriptionServiceImplementation implements SubscriptionService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
-    private readonly githubRepoRepository: GithubRepoRepository,
+    private readonly githubRepoRepository: RepoRepository,
     private readonly repoScanner: RepositoryScanner,
     private readonly tokensService: NotificationTokensService,
     private readonly emailQueue: EmailQueueClient,

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { CacheService } from '../../services/cache/cache.service.js';
+import type { CacheService } from '../../services/cache/cache.service.interface.js';
 
 export const routeCache = (
   cacheService: CacheService,
@@ -25,7 +25,7 @@ export const routeCache = (
       const originalJson = res.json.bind(res);
 
       res.json = (body: unknown) => {
-        cacheService.set(key, body, ttlSeconds).catch((err) => {
+        cacheService.set(key, body, ttlSeconds).catch((err: unknown) => {
           console.error(`[Cache Error] Failed to set ${key}`, err);
         });
 

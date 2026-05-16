@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { SubscriptionService } from './subscription.service.js';
+import type { SubscriptionService } from './subscription.service.interface.js';
 import type {
   SubscriptionTokenInput,
   SubscribeInput,
@@ -19,9 +19,9 @@ export class SubscriptionController {
     next: NextFunction,
   ): Promise<void> {
     const body = req.body as SubscribeInput;
+    const { owner, repoName } = res.locals;
 
-    const [owner, repoName] = body.repo.split('/');
-    await this.service.subscribe(body.email, owner!, repoName!);
+    await this.service.subscribe(body.email, owner, repoName);
 
     res
       .status(200)

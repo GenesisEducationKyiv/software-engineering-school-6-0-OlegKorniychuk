@@ -1,15 +1,15 @@
 import { describe, expect, it, beforeEach } from '@jest/globals';
 import jwt from 'jsonwebtoken';
-import { NotificationTokensService } from './notification-tokens.service.js';
+import { NotificationTokensServiceImplementation } from './notification-tokens.service.js';
 import { NotificationTokenTypesEnum } from './token-types.enum.js';
 import type { NotificationTokenPayload } from './notification-tokens.types.js';
 
 describe('NotificationTokensService', () => {
   const testSecret = 'super-secret-test-key';
-  let service: NotificationTokensService;
+  let service: NotificationTokensServiceImplementation;
 
   beforeEach(() => {
-    service = new NotificationTokensService(testSecret);
+    service = new NotificationTokensServiceImplementation(testSecret);
   });
 
   describe('generateConfirmToken', () => {
@@ -74,7 +74,7 @@ describe('NotificationTokensService', () => {
     });
 
     it('should return null if the token was signed with a different secret', () => {
-      const maliciousService = new NotificationTokensService(
+      const maliciousService = new NotificationTokensServiceImplementation(
         'different-secret',
       );
       const badToken = maliciousService.generateConfirmToken('sub-123');

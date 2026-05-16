@@ -4,8 +4,9 @@ import {
 } from '../../utils/error-handling/errors/github-api.error.js';
 import type { GithubApi } from './github-api.interface.js';
 import type { GithubApiErrorResponse, GitHubRelease } from './github.types.js';
+import type { RepositoryScanner } from './repository-scanner.service.interface.js';
 
-export class RepositoryScanner {
+export class RepositoryScannerImplementation implements RepositoryScanner {
   constructor(private readonly githubApi: GithubApi) {}
 
   public async verifyRepository(owner: string, repo: string): Promise<void> {

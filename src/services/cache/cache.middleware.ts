@@ -1,10 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
+import type { Logger } from 'pino';
 import type { CacheService } from '../../services/cache/cache.service.interface.js';
 
 export const routeCache = (
   cacheService: CacheService,
   keyGenerator: (req: Request) => string,
   ttlSeconds: number = 3600,
+  logger: Logger,
 ) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (req.method !== 'GET') {
@@ -16,17 +18,17 @@ export const routeCache = (
 
       const cachedData = await cacheService.get<unknown>(key);
       if (cachedData) {
-        console.log(`[Cache Hit] ${key}`);
+        logger.info(`[Cache Hit] ${key}`);
         return res.status(200).json(cachedData);
       }
 
-      console.log(`[Cache Miss] ${key}`);
+      logger.info(`[Cache Miss] ${key}`);
 
       const originalJson = res.json.bind(res);
 
       res.json = (body: unknown) => {
         cacheService.set(key, body, ttlSeconds).catch((err: unknown) => {
-          console.error(`[Cache Error] Failed to set ${key}`, err);
+          logger.error({ err }, `[Cache Error] Failed to set ${key}`);
         });
 
         return originalJson(body);
@@ -34,7 +36,7 @@ export const routeCache = (
 
       next();
     } catch (error) {
-      console.error('[Cache Middleware Error]', error);
+      logger.error({ err: error }, '[Cache Middleware Error]');
       next();
     }
   };

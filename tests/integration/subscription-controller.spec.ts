@@ -60,10 +60,6 @@ let shutdownDependencies: () => Promise<void>;
 let mailpitApiUrl: string;
 let tokensService: NotificationTokensService;
 
-beforeAll(() => {
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-});
-
 beforeAll(async () => {
   jest.setTimeout(120000);
 

@@ -1,4 +1,5 @@
 import { env } from './config/envs.js';
+import { logger } from './utils/logger.js';
 import { ScanRunner } from './cron/scan-runner.js';
 import { ScannerCron } from './cron/scanner-cron.js';
 import { drizzleClient, pool } from './db/client.js';
@@ -60,7 +61,10 @@ const notificationDispatcher = new NotificationDispatcherImplementation(
 );
 
 // Services & Controllers
-export const cacheService = new CacheServiceImplementation(redisConnection);
+export const cacheService = new CacheServiceImplementation(
+  redisConnection,
+  logger,
+);
 
 export const subscriptionService = new SubscriptionServiceImplementation(
   subscriptionRepository,
@@ -81,11 +85,12 @@ const scanRunner = new ScanRunner(
   githubRepoRepository,
   releaseChecker,
   notificationDispatcher,
+  logger,
 );
 
-export const scannerCron = new ScannerCron(redisConnection, scanRunner);
+export const scannerCron = new ScannerCron(redisConnection, scanRunner, logger);
 
-export const emailWorker = new EmailWorker(redisConnection);
+export const emailWorker = new EmailWorker(redisConnection, logger);
 
 emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
   const data = job.data as SendConfirmationEmailPayload;
@@ -103,14 +108,14 @@ emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
 });
 
 export const shutdownDependencies = async () => {
-  console.log('Closing background workers and queues...');
+  logger.info('Closing background workers and queues...');
 
   await emailWorker.worker.close();
   await scannerCron.worker.close();
   await scannerCron.queue.close();
   await emailQueue.queue.close();
 
-  console.log('Closing database connections...');
+  logger.info('Closing database connections...');
 
   await redisConnection.quit();
 

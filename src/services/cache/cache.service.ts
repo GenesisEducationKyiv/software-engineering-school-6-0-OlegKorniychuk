@@ -1,8 +1,12 @@
 import type { Redis } from 'ioredis';
+import type { Logger } from 'pino';
 import type { CacheService } from './cache.service.interface.js';
 
 export class CacheServiceImplementation implements CacheService {
-  constructor(private readonly redis: Redis) {}
+  constructor(
+    private readonly redis: Redis,
+    private readonly logger: Logger,
+  ) {}
 
   public async get<T>(key: string): Promise<T | null> {
     try {
@@ -12,14 +16,14 @@ export class CacheServiceImplementation implements CacheService {
       try {
         return JSON.parse(cachedData) as T;
       } catch (error) {
-        console.error(
+        this.logger.error(
+          { err: error },
           `[CacheService] Failed to parse cache for key: ${key}`,
-          error,
         );
-        console.error(`[CacheService] Redis connection error`, error);
         return null;
       }
     } catch (err) {
+      this.logger.error({ err }, `[CacheService] Redis connection error`);
       return null;
     }
   }
@@ -33,9 +37,9 @@ export class CacheServiceImplementation implements CacheService {
       const stringifiedValue = JSON.stringify(value);
       await this.redis.set(key, stringifiedValue, 'EX', ttlSeconds);
     } catch (error) {
-      console.error(
+      this.logger.error(
+        { err: error },
         `[CacheService] Failed to set cache for key: ${key}`,
-        error,
       );
     }
   }
@@ -44,9 +48,9 @@ export class CacheServiceImplementation implements CacheService {
     try {
       await this.redis.del(key);
     } catch (error) {
-      console.error(
+      this.logger.error(
+        { err: error },
         `[CacheService] Failed to delete cache for key: ${key}`,
-        error,
       );
     }
   }

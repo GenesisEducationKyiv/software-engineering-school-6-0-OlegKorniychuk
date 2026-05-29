@@ -1,3 +1,4 @@
+import type { Logger } from 'pino';
 import type { RepoRepository } from '../repositories/repo-repository.interface.js';
 import type { ReleaseCheckerService } from '../services/scanner/release-checker.service.interface.js';
 import type { NotificationDispatcher } from '../services/notifier/notification-dispatcher.interface.js';
@@ -7,10 +8,11 @@ export class ScanRunner {
     private readonly githubRepoRepository: RepoRepository,
     private readonly releaseChecker: ReleaseCheckerService,
     private readonly notificationDispatcher: NotificationDispatcher,
+    private readonly logger: Logger,
   ) {}
 
   public async runPeriodicScan(): Promise<void> {
-    console.log('[Scanner]: Starting periodic release scan...');
+    this.logger.info('[Scanner]: Starting periodic release scan...');
 
     const repos = await this.githubRepoRepository.findAll();
     let totalEmailsQueued = 0;
@@ -21,7 +23,7 @@ export class ScanRunner {
           await this.releaseChecker.checkAndUpdateRelease(repo);
 
         if (newReleaseTag) {
-          console.log(
+          this.logger.info(
             `[Scanner]: Found new release for ${repo.name}: ${newReleaseTag}`,
           );
 
@@ -35,11 +37,14 @@ export class ScanRunner {
           totalEmailsQueued += queuedCount;
         }
       } catch (error) {
-        console.error(`[Scanner]: Failed to check ${repo.name}`, error);
+        this.logger.error(
+          { err: error },
+          `[Scanner]: Failed to check ${repo.name}`,
+        );
       }
     }
 
-    console.log(
+    this.logger.info(
       `[Scanner]: Scan complete. Queued ${totalEmailsQueued} individual notification emails.`,
     );
   }

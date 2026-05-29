@@ -1,5 +1,6 @@
 import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
+import type { Logger } from 'pino';
 import { Queues } from './queues.enum.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
@@ -8,7 +9,10 @@ export class EmailWorker {
   public readonly worker: Worker;
   private readonly handlers: Map<string, JobHandler> = new Map();
 
-  constructor(redisConnection: Redis) {
+  constructor(
+    redisConnection: Redis,
+    private readonly logger: Logger,
+  ) {
     this.worker = new Worker(
       Queues.email,
       async (job: Job) => {
@@ -16,14 +20,14 @@ export class EmailWorker {
         if (handler) {
           await handler(job);
         } else {
-          console.warn(`Unknown job type: ${job.name}`);
+          this.logger.warn(`Unknown job type: ${job.name}`);
         }
       },
       { connection: redisConnection, autorun: process.env.NODE_ENV !== 'test' },
     );
 
     this.worker.on('failed', (job, err) => {
-      console.error(`Job ${job?.id} failed:`, err);
+      this.logger.error({ err }, `Job ${job?.id} failed`);
     });
   }
 

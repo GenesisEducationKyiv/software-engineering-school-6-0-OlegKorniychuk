@@ -80,8 +80,8 @@ async function start() {
     .run()
     .catch((err) => console.error('Worker run error:', err));
 
-  const appModule = await import('../../src/app.js');
-  const app = appModule.default;
+  const { createApp } = await import('../../src/app.js');
+  const app = createApp(deps.metricsCollector);
 
   app.listen(3002, () => {
     console.log('E2E Server listening on port 3002');

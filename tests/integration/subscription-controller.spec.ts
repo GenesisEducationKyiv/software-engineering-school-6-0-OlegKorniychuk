@@ -108,8 +108,8 @@ beforeAll(async () => {
     .run()
     .catch((err) => console.error('Worker run error:', err));
 
-  const appModule = await import('../../src/app.js');
-  app = appModule.default;
+  const { createApp } = await import('../../src/app.js');
+  app = createApp(deps.metricsCollector);
 }, 120000);
 
 afterAll(async () => {

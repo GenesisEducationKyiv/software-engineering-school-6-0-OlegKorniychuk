@@ -6,6 +6,7 @@ import { makeHandleError } from './utils/error-handling/handle-error.js';
 import { logger } from './utils/logger.js';
 import { makeMetricsMiddleware } from './utils/middlewares/metrics.middleware.js';
 import type { MetricsCollector } from './metrics-collector.js';
+import { startPrometheus } from './prometheus.js';
 
 export function createApp(metricsCollector: MetricsCollector): Express {
   const app = express();
@@ -23,4 +24,11 @@ export function createApp(metricsCollector: MetricsCollector): Express {
   app.use(makeHandleError(logger));
 
   return app;
+}
+
+export function createMetricsApp(): Express {
+  const metricsApp = express();
+  startPrometheus(metricsApp);
+
+  return metricsApp;
 }

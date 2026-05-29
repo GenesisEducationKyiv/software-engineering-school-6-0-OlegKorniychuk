@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import type { Express } from 'express';
 
-import { createApp } from './app.js';
+import { createApp, createMetricsApp } from './app.js';
 import {
   metricsCollector,
   scannerCron,
@@ -9,12 +9,10 @@ import {
 } from './dependencies-container.js';
 import type { ScannerCron } from './cron/scanner-cron.js';
 import { env } from './config/envs.js';
-import { startPrometheus } from './prometheus.js';
 import { logger } from './utils/logger.js';
 
 const startServer = async (app: Express, scannerCron: ScannerCron) => {
   if (process.env.NODE_ENV !== 'test') {
-    startPrometheus(app);
     logger.info('Starting background jobs...');
     await scannerCron.startSchedule();
   }
@@ -25,6 +23,7 @@ const startServer = async (app: Express, scannerCron: ScannerCron) => {
 };
 
 const app = createApp(metricsCollector);
+const metricsApp = createMetricsApp();
 
 startServer(app, scannerCron)
   .then((server) => {
@@ -66,3 +65,5 @@ startServer(app, scannerCron)
     logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
   });
+
+metricsApp.listen(3090, () => console.log('Internal metrics running on 3090'));

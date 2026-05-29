@@ -6,7 +6,9 @@ import { handleError } from './utils/error-handling/handle-error.js';
 
 const app = express();
 
-app.use(morgan('dev'));
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
 app.use(express.json());
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));

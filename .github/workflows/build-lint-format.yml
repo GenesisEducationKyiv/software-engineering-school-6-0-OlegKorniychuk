@@ -1,4 +1,4 @@
-name: Node.js CI
+name: Build, Lint & Format
 
 on:
   push:
@@ -7,19 +7,8 @@ on:
     branches: ['main']
 
 jobs:
-  build-and-test:
+  build-lint-format:
     runs-on: ubuntu-latest
-
-    env:
-      PORT: 3000
-      DATABASE_URL: postgres://postgres:password@localhost:5432/releases_db
-      GITHUB_TOKEN: dummy_token_for_tests
-      EMAIL_SERVICE: Gmail
-      EMAIL_SERVICE_USERNAME: username@gmail.com
-      EMAIL_SERVICE_PASSWORD: password
-      NOTIFICATION_TOKEN_SECRET: secret
-      REDIS_URL: redis://localhost:6379
-      API_KEY: api_key
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +30,3 @@ jobs:
 
       - name: Check formatting
         run: npm run format
-
-      - name: Run Tests
-        run: npm test

@@ -2,7 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { Queues } from './queues.enum.js';
-import { emailJobsTotal, emailJobDurationSeconds } from '../../prometheus.js';
+import type { MetricsCollector } from '../../metrics-collector.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
 
@@ -13,6 +13,7 @@ export class EmailWorker {
   constructor(
     redisConnection: Redis,
     private readonly logger: Logger,
+    private readonly metrics: MetricsCollector,
   ) {
     this.worker = new Worker(
       Queues.email,
@@ -22,19 +23,7 @@ export class EmailWorker {
           this.logger.warn(`Unknown job type: ${job.name}`);
           return;
         }
-        const start = Date.now();
-        try {
-          await handler(job);
-          emailJobsTotal.inc({ job_type: job.name, status: 'success' });
-        } catch (err) {
-          emailJobsTotal.inc({ job_type: job.name, status: 'failed' });
-          throw err;
-        } finally {
-          emailJobDurationSeconds.observe(
-            { job_type: job.name },
-            (Date.now() - start) / 1000,
-          );
-        }
+        await this.metrics.trackEmailJob(job.name, () => handler(job));
       },
       { connection: redisConnection, autorun: process.env.NODE_ENV !== 'test' },
     );

@@ -3,7 +3,7 @@ import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { Queues } from '../services/email-queue/queues.enum.js';
 import type { ScanRunner } from './scan-runner.js';
-import { scanRunsTotal, scanDurationSeconds } from '../prometheus.js';
+import type { MetricsCollector } from '../metrics-collector.js';
 
 export class ScannerCron {
   public readonly queue: Queue;
@@ -14,22 +14,16 @@ export class ScannerCron {
     redisConnection: Redis,
     private readonly coordinator: ScanRunner,
     private readonly logger: Logger,
+    private readonly metrics: MetricsCollector,
   ) {
     this.queue = new Queue(Queues.scanner, { connection: redisConnection });
 
     this.worker = new Worker(
       Queues.scanner,
       async () => {
-        const start = Date.now();
-        try {
-          await this.coordinator.runPeriodicScan();
-          scanRunsTotal.inc({ status: 'success' });
-        } catch (err) {
-          scanRunsTotal.inc({ status: 'failed' });
-          throw err;
-        } finally {
-          scanDurationSeconds.observe((Date.now() - start) / 1000);
-        }
+        await this.metrics.trackScanRun(() =>
+          this.coordinator.runPeriodicScan(),
+        );
       },
       { connection: redisConnection, autorun: process.env.NODE_ENV !== 'test' },
     );

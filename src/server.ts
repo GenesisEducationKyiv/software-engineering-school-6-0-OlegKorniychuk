@@ -1,8 +1,12 @@
 import 'dotenv/config';
 import type { Express } from 'express';
 
-import app from './app.js';
-import { scannerCron, shutdownDependencies } from './dependencies-container.js';
+import { createApp } from './app.js';
+import {
+  metricsCollector,
+  scannerCron,
+  shutdownDependencies,
+} from './dependencies-container.js';
 import type { ScannerCron } from './cron/scanner-cron.js';
 import { env } from './config/envs.js';
 import { startPrometheus } from './prometheus.js';
@@ -19,6 +23,8 @@ const startServer = async (app: Express, scannerCron: ScannerCron) => {
     logger.info(`Server listening on port ${env.PORT}`);
   });
 };
+
+const app = createApp(metricsCollector);
 
 startServer(app, scannerCron)
   .then((server) => {

@@ -104,3 +104,7 @@ Hardcoded in docker-compose for convenience:
 - `DATABASE_URL`, `REDIS_URL`, `NOTIFICATION_TOKEN_SECRET`, `PORT`
 
 All env vars are parsed and validated at startup via Zod in `src/config/envs.ts`.
+
+### Code Style
+
+- Use explicit "public"

@@ -1,5 +1,6 @@
 import { env } from './config/envs.js';
 import { logger } from './utils/logger.js';
+import { MetricsCollector } from './metrics-collector.js';
 import { ScanRunner } from './cron/scan-runner.js';
 import { ScannerCron } from './cron/scanner-cron.js';
 import { drizzleClient, pool } from './db/client.js';
@@ -25,12 +26,17 @@ import type {
   SendNotificationEmailPayload,
 } from './services/email-queue/email-queue.service.interface.js';
 
+export const metricsCollector = new MetricsCollector();
+
 // Repositories & APIs
 const subscriptionRepository = new SubscriptionRepositoryImplementation(
   drizzleClient,
 );
 const githubRepoRepository = new GithubRepoRepository(drizzleClient);
-const githubApi = new GithubApiImplementation(env.GITHUB_TOKEN);
+const githubApi = new GithubApiImplementation(
+  env.GITHUB_TOKEN,
+  metricsCollector,
+);
 const repoScanner = new RepositoryScannerImplementation(githubApi);
 
 // Utilities & Clients
@@ -88,9 +94,18 @@ const scanRunner = new ScanRunner(
   logger,
 );
 
-export const scannerCron = new ScannerCron(redisConnection, scanRunner, logger);
+export const scannerCron = new ScannerCron(
+  redisConnection,
+  scanRunner,
+  logger,
+  metricsCollector,
+);
 
-export const emailWorker = new EmailWorker(redisConnection, logger);
+export const emailWorker = new EmailWorker(
+  redisConnection,
+  logger,
+  metricsCollector,
+);
 
 emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
   const data = job.data as SendConfirmationEmailPayload;

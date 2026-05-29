@@ -2,6 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { Queues } from './queues.enum.js';
+import { emailJobsTotal, emailJobDurationSeconds } from '../../prometheus.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
 
@@ -17,10 +18,22 @@ export class EmailWorker {
       Queues.email,
       async (job: Job) => {
         const handler = this.handlers.get(job.name);
-        if (handler) {
-          await handler(job);
-        } else {
+        if (!handler) {
           this.logger.warn(`Unknown job type: ${job.name}`);
+          return;
+        }
+        const start = Date.now();
+        try {
+          await handler(job);
+          emailJobsTotal.inc({ job_type: job.name, status: 'success' });
+        } catch (err) {
+          emailJobsTotal.inc({ job_type: job.name, status: 'failed' });
+          throw err;
+        } finally {
+          emailJobDurationSeconds.observe(
+            { job_type: job.name },
+            (Date.now() - start) / 1000,
+          );
         }
       },
       { connection: redisConnection, autorun: process.env.NODE_ENV !== 'test' },

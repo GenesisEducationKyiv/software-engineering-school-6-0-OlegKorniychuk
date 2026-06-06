@@ -19,7 +19,6 @@ import type { DrizzleClient } from '../../src/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 import { mockGithubServer } from '../github-mock-api.js';
 
-beforeAll(() => mockGithubServer.listen({ onUnhandledRequest: 'bypass' }));
 afterEach(() => mockGithubServer.resetHandlers());
 afterAll(() => mockGithubServer.close());
 
@@ -67,6 +66,8 @@ beforeAll(async () => {
   const migrationDb = drizzle({ client: migrationPool });
   await migrate(migrationDb, { migrationsFolder: './drizzle' });
   await migrationPool.end();
+
+  mockGithubServer.listen({ onUnhandledRequest: 'bypass' });
 
   // Import app and dependencies
   const dbClient = await import('../../src/db/client.js');

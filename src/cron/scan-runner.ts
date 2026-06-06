@@ -38,14 +38,15 @@ export class ScanRunner {
         }
       } catch (error) {
         this.logger.error(
-          { err: error },
-          `[Scanner]: Failed to check ${repo.name}`,
+          { err: error, repo: repo.name },
+          `[Scanner]: Failed to check repo`,
         );
       }
     }
 
     this.logger.info(
-      `[Scanner]: Scan complete. Queued ${totalEmailsQueued} individual notification emails.`,
+      { queuedEmails: totalEmailsQueued },
+      `[Scanner]: Scan complete.`,
     );
   }
 }

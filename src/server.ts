@@ -66,4 +66,4 @@ startServer(app, scannerCron)
     process.exit(1);
   });
 
-metricsApp.listen(3090, () => console.log('Internal metrics running on 3090'));
+metricsApp.listen(3090, () => logger.info('Internal metrics running on 3090'));

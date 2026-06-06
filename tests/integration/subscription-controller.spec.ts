@@ -7,8 +7,6 @@ import {
 import { RedisContainer, StartedRedisContainer } from '@testcontainers/redis';
 import { GenericContainer } from 'testcontainers';
 import type { StartedTestContainer } from 'testcontainers';
-import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
@@ -19,37 +17,11 @@ import type { Express } from 'express';
 import type { NotificationTokensService } from '../../src/services/notification-tokens-service/notification-tokens.service.interface.js';
 import type { DrizzleClient } from '../../src/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
+import { mockGithubServer } from '../github-mock-api.js';
 
-// Mock GitHub API
-const server = setupServer(
-  http.get('https://api.github.com/repos/:owner/:repo', ({ params }) => {
-    const { owner, repo } = params;
-    if (owner === 'nonexistent') {
-      return new HttpResponse(null, { status: 404 });
-    }
-    return HttpResponse.json({
-      id: 12345,
-      full_name: `${owner}/${repo}`,
-      tag_name: 'v1.0.0',
-    });
-  }),
-  http.get(
-    'https://api.github.com/repos/:owner/:repo/releases/latest',
-    ({ params }) => {
-      const { owner } = params;
-      if (owner === 'nonexistent') {
-        return new HttpResponse(null, { status: 404 });
-      }
-      return HttpResponse.json({
-        tag_name: 'v1.0.0',
-      });
-    },
-  ),
-);
-
-beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+beforeAll(() => mockGithubServer.listen({ onUnhandledRequest: 'bypass' }));
+afterEach(() => mockGithubServer.resetHandlers());
+afterAll(() => mockGithubServer.close());
 
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
@@ -110,6 +82,16 @@ beforeAll(async () => {
 
   const { createApp } = await import('../../src/app.js');
   app = createApp(deps.metricsCollector);
+
+  const cleanup = async () => {
+    if (shutdownDependencies) await shutdownDependencies();
+    if (pgContainer) await pgContainer.stop();
+    if (redisContainer) await redisContainer.stop();
+    if (mailpitContainer) await mailpitContainer.stop();
+  };
+
+  process.once('SIGTERM', cleanup);
+  process.once('SIGINT', cleanup);
 }, 120000);
 
 afterAll(async () => {

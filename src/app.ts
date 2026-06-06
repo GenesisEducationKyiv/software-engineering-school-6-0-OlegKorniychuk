@@ -2,11 +2,11 @@ import express, { type Express } from 'express';
 
 import { pinoHttp } from 'pino-http';
 import router from './routes.js';
-import { makeHandleError } from './utils/error-handling/handle-error.js';
-import { logger } from './utils/logger.js';
-import { makeMetricsMiddleware } from './utils/middlewares/metrics.middleware.js';
-import type { MetricsCollector } from './metrics-collector.js';
-import { startPrometheus } from './prometheus.js';
+import { makeHandleError } from './shared/utils/error-handling/handle-error.js';
+import { logger } from './shared/utils/logger.js';
+import { makeMetricsMiddleware } from './shared/utils/middlewares/metrics.middleware.js';
+import type { MetricsCollector } from './shared/metrics/metrics-collector.js';
+import { startPrometheus } from './shared/metrics/prometheus.js';
 
 export function createApp(metricsCollector: MetricsCollector): Express {
   const app = express();

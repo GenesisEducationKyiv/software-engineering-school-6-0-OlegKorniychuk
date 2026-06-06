@@ -3,7 +3,7 @@ import { RepositoryScannerImplementation } from './repository-scanner.service.js
 import {
   GithubApiError,
   GithubApiErrorTypesEnum,
-} from '../../utils/error-handling/errors/github-api.error.js';
+} from '../../shared/utils/error-handling/errors/github-api.error.js';
 import type { GithubApi } from './github-api.interface.js';
 import type {
   GithubApiResponse,

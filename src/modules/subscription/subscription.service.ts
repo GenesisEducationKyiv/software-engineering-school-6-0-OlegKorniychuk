@@ -3,7 +3,7 @@ import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
 } from '../../repositories/subscription/subscription.repository.interface.js';
-import type { CacheService } from '../../services/cache/cache.service.interface.js';
+import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.ts';
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
@@ -11,7 +11,7 @@ import type { RepositoryScanner } from '../../services/scanner/repository-scanne
 import {
   AppError,
   AppErrorTypesEnum,
-} from '../../utils/error-handling/errors/app.error.js';
+} from '../../shared/utils/error-handling/errors/app.error.js';
 import type { SubscriptionService } from './subscription.service.interface.js';
 
 export class SubscriptionServiceImplementation implements SubscriptionService {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { validateRequest } from './utils/middlewares/validateRequest.js';
+import { validateRequest } from './shared/utils/middlewares/validateRequest.js';
 import {
   subscriptionTokenSchema,
   subscribeSchema,
@@ -11,8 +11,8 @@ import {
   subscriptionService,
 } from './dependencies-container.js';
 import { routeCache } from './services/cache/cache.middleware.js';
-import { logger } from './utils/logger.js';
-import { requireApiKey } from './auth/api-key.middleware.js';
+import { logger } from './shared/utils/logger.js';
+import { requireApiKey } from './shared/auth/api-key.middleware.js';
 import { parseRepositoryString } from './modules/subscription/parse-repository.middleware.js';
 
 const router = Router();

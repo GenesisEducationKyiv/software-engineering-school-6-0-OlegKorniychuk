@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
-import type { DrizzleClient } from '../../db/client.js';
-import { githubRepositories } from '../../db/schema/repositories.js';
+import type { DrizzleClient } from '../../shared/db/client.js';
+import { githubRepositories } from '../../shared/db/schema/repositories.js';
 import type { CreateGithubRepo, GithubRepo } from './github-repo.types.js';
 import type { RepoRepository } from '../repo-repository.interface.js';
 

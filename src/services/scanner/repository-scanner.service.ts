@@ -1,7 +1,7 @@
 import {
   GithubApiError,
   GithubApiErrorTypesEnum,
-} from '../../utils/error-handling/errors/github-api.error.js';
+} from '../../shared/utils/error-handling/errors/github-api.error.js';
 import type { GithubApi } from './github-api.interface.js';
 import type { GithubApiErrorResponse, GitHubRelease } from './github.types.js';
 import type { RepositoryScanner } from './repository-scanner.service.interface.js';

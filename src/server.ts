@@ -8,8 +8,8 @@ import {
   shutdownDependencies,
 } from './dependencies-container.js';
 import type { ScannerCron } from './cron/scanner-cron.js';
-import { env } from './config/envs.js';
-import { logger } from './utils/logger.js';
+import { env } from './shared/config/envs.js';
+import { logger } from './shared/utils/logger.js';
 
 const startServer = async (app: Express, scannerCron: ScannerCron) => {
   if (process.env.NODE_ENV !== 'test') {

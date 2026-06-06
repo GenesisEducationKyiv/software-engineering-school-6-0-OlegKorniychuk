@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { Logger } from 'pino';
-import type { CacheService } from '../../services/cache/cache.service.interface.js';
+import type { CacheService } from './cache.service.interface.js';
 
 export const routeCache = (
   cacheService: CacheService,

@@ -1,4 +1,4 @@
-import type { PartialBy } from '../utils/partial-by.js';
+import type { PartialBy } from '../shared/utils/partial-by.js';
 
 export type Repo = {
   id: string;

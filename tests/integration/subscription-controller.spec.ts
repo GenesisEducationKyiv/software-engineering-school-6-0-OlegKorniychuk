@@ -11,11 +11,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
-import { githubRepositories } from '../../src/db/schema/repositories.js';
-import { subscriptions } from '../../src/db/schema/subscriptions.js';
+import { githubRepositories } from '../../src/shared/db/schema/repositories.js';
+import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { Express } from 'express';
 import type { NotificationTokensService } from '../../src/services/notification-tokens-service/notification-tokens.service.interface.js';
-import type { DrizzleClient } from '../../src/db/client.js';
+import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 import { mockGithubServer } from '../github-mock-api.js';
 

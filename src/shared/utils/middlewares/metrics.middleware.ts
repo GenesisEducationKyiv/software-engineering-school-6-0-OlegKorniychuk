@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import type { MetricsCollector } from '../../metrics-collector.js';
+import type { MetricsCollector } from '../../metrics/metrics-collector.js';
 
 export function makeMetricsMiddleware(metrics: MetricsCollector) {
   return function metricsMiddleware(

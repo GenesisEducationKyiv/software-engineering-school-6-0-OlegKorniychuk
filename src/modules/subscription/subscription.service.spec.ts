@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
 import { SubscriptionServiceImplementation } from './subscription.service.js';
-import { AppErrorTypesEnum } from '../../utils/error-handling/errors/app.error.js';
+import { AppErrorTypesEnum } from '../../shared/utils/error-handling/errors/app.error.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
 
 import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
@@ -11,7 +11,7 @@ import type {
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.interface.js';
 import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.js';
-import type { CacheService } from '../../services/cache/cache.service.interface.js';
+import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { GithubRepo } from '../../repositories/github-repo/github-repo.types.js';
 import type { Subscription } from '../../repositories/subscription/subscription.types.js';
 import type { NotificationTokenPayload } from '../../services/notification-tokens-service/notification-tokens.types.js';

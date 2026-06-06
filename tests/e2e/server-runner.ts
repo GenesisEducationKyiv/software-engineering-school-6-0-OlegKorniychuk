@@ -1,44 +1,14 @@
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { RedisContainer } from '@testcontainers/redis';
 import { GenericContainer } from 'testcontainers';
-import { setupServer } from 'msw/node';
-import { http, HttpResponse } from 'msw';
 import pg from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import fs from 'fs';
 import path from 'path';
-
-// Mock GitHub API
-const server = setupServer(
-  http.get('https://api.github.com/repos/:owner/:repo', ({ params }) => {
-    const { owner, repo } = params;
-    if (owner === 'nonexistent') {
-      return new HttpResponse(null, { status: 404 });
-    }
-    return HttpResponse.json({
-      id: 12345,
-      full_name: `${owner}/${repo}`,
-      tag_name: 'v1.0.0',
-    });
-  }),
-  http.get(
-    'https://api.github.com/repos/:owner/:repo/releases/latest',
-    ({ params }) => {
-      const { owner } = params;
-      if (owner === 'nonexistent') {
-        return new HttpResponse(null, { status: 404 });
-      }
-      return HttpResponse.json({
-        tag_name: 'v1.0.0',
-      });
-    },
-  ),
-);
+import { mockGithubServer } from '../github-mock-api.js';
 
 async function start() {
-  server.listen({ onUnhandledRequest: 'bypass' });
-
   const pgContainer = await new PostgreSqlContainer('postgres:13-alpine')
     .withDatabase('test')
     .withUsername('test')
@@ -65,8 +35,11 @@ async function start() {
   process.env.PORT = '3002';
   delete process.env.EMAIL_SERVICE;
 
+  const envFilePath = path.join(process.cwd(), '.env.e2e');
+  if (fs.existsSync(envFilePath)) fs.unlinkSync(envFilePath);
+
   fs.writeFileSync(
-    path.join(process.cwd(), '.env.e2e'),
+    envFilePath,
     `DATABASE_URL=${process.env.DATABASE_URL}\nMAILPIT_API_URL=${process.env.MAILPIT_API_URL}\nNOTIFICATION_TOKEN_SECRET=${process.env.NOTIFICATION_TOKEN_SECRET}`,
   );
 
@@ -75,17 +48,37 @@ async function start() {
   await migrate(migrationDb, { migrationsFolder: './drizzle' });
   await migrationPool.end();
 
+  mockGithubServer.listen({ onUnhandledRequest: 'bypass' });
+
   const deps = await import('../../src/dependencies-container.js');
   deps.emailWorker.worker
     .run()
     .catch((err) => console.error('Worker run error:', err));
 
-  const appModule = await import('../../src/app.js');
-  const app = appModule.default;
-
-  app.listen(3002, () => {
-    console.log('E2E Server listening on port 3002');
+  deps.emailWorker.worker.on('error', (err) => {
+    console.error('Worker connection error:', err);
   });
+
+  const { createApp } = await import('../../src/app.js');
+  const app = createApp(deps.metricsCollector);
+
+  const httpServer = app.listen(3002);
+
+  const shutdown = async () => {
+    httpServer.close();
+    await deps.shutdownDependencies();
+    await pgContainer.stop();
+    await redisContainer.stop();
+    await mailpitContainer.stop();
+    mockGithubServer.close();
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
-start().catch(console.error);
+start().catch((err) => {
+  console.error('Failed to start E2E server:', err);
+  process.exit(1);
+});

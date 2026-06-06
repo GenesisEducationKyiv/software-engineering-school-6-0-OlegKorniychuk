@@ -23,6 +23,8 @@ COPY --from=builder /app/drizzle ./drizzle
 
 COPY public ./public
 
+RUN mkdir -p /var/log/github-release-notifier
+
 EXPOSE 3000
 
 CMD ["npm", "start"]

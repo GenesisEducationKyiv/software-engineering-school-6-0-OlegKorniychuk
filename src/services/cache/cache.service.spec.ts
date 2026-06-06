@@ -1,10 +1,12 @@
 import { jest, describe, expect, it, beforeEach } from '@jest/globals';
 import { CacheServiceImplementation } from './cache.service.js';
 import type { Redis } from 'ioredis';
+import type { Logger } from 'pino';
 
 describe('CacheService', () => {
   let cacheService: CacheServiceImplementation;
   let mockRedis: jest.Mocked<Redis>;
+  let mockLogger: jest.Mocked<Pick<Logger, 'error' | 'warn' | 'info'>>;
 
   beforeEach(() => {
     mockRedis = {
@@ -13,9 +15,16 @@ describe('CacheService', () => {
       del: jest.fn(),
     } as unknown as jest.Mocked<Redis>;
 
-    cacheService = new CacheServiceImplementation(mockRedis);
+    mockLogger = {
+      error: jest.fn(),
+      warn: jest.fn(),
+      info: jest.fn(),
+    } as unknown as jest.Mocked<Pick<Logger, 'error' | 'warn' | 'info'>>;
 
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    cacheService = new CacheServiceImplementation(
+      mockRedis,
+      mockLogger as unknown as Logger,
+    );
   });
 
   describe('get', () => {
@@ -45,7 +54,7 @@ describe('CacheService', () => {
       const result = await cacheService.get(mockKey);
 
       expect(result).toBeNull();
-      expect(console.error).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
 
     it('should safely return null when Redis connection fails', async () => {
@@ -56,7 +65,7 @@ describe('CacheService', () => {
       const result = await cacheService.get(mockKey);
 
       expect(result).toBeNull();
-      expect(console.error).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 
@@ -90,7 +99,7 @@ describe('CacheService', () => {
       mockRedis.set.mockRejectedValueOnce(new Error('Redis timeout'));
 
       await expect(cacheService.set(mockKey, mockValue)).resolves.not.toThrow();
-      expect(console.error).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 
@@ -104,7 +113,7 @@ describe('CacheService', () => {
       mockRedis.del.mockRejectedValueOnce(new Error('Redis timeout'));
 
       await expect(cacheService.del('test-key')).resolves.not.toThrow();
-      expect(console.error).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 });

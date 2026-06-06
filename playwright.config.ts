@@ -6,21 +6,23 @@ export default defineConfig({
     command: 'npx tsx tests/e2e/server-runner.ts',
     url: 'http://localhost:3002',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    timeout: 300 * 1000,
   },
   use: {
     baseURL: 'http://localhost:3002',
   },
   projects: [
     {
-      name: "chromium",
+      name: 'chromium',
       use: {
-        ...devices["Desktop Chrome"],
+        ...devices['Desktop Chrome'],
         ...(process.env.CI
           ? {}
           : {
               launchOptions: {
-                executablePath: "/usr/bin/chromium",
+                executablePath: '/usr/bin/chromium',
               },
             }),
       },

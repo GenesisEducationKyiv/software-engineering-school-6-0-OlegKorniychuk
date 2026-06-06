@@ -1,7 +1,12 @@
 import { AppErrorTypesEnum, type AppError } from '../errors/app.error.js';
 import type { Response } from 'express';
+import type { Logger } from 'pino';
 
-export function handleAppError(err: AppError, res: Response): void {
+export function handleAppError(
+  err: AppError,
+  res: Response,
+  logger: Logger,
+): void {
   const handlersMap: Record<
     AppErrorTypesEnum,
     (err: AppError, res: Response) => void
@@ -17,7 +22,7 @@ export function handleAppError(err: AppError, res: Response): void {
       res.status(404).json({ message: `This ${entity} does not exists` });
     },
     [AppErrorTypesEnum.other]: (err, res) => {
-      console.error(err);
+      logger.error({ err }, 'Unexpected server error');
       res.status(500).json({ message: 'Unexpected server error' });
     },
   };

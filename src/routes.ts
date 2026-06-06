@@ -11,6 +11,7 @@ import {
   subscriptionService,
 } from './dependencies-container.js';
 import { routeCache } from './services/cache/cache.middleware.js';
+import { logger } from './utils/logger.js';
 import { requireApiKey } from './auth/api-key.middleware.js';
 import { parseRepositoryString } from './modules/subscription/parse-repository.middleware.js';
 
@@ -46,6 +47,7 @@ router.route('/subscriptions').get(
     cacheService,
     (req) => subscriptionService.getCacheKey(req.query.email as string),
     600,
+    logger,
   ),
   subscriptionController.getSubscriptions.bind(subscriptionController),
 );

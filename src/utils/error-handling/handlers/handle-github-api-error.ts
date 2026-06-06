@@ -3,8 +3,13 @@ import {
   GithubApiErrorTypesEnum,
 } from '../errors/github-api.error.js';
 import type { Response } from 'express';
+import type { Logger } from 'pino';
 
-export function handleGithubApiError(err: GithubApiError, res: Response): void {
+export function handleGithubApiError(
+  err: GithubApiError,
+  res: Response,
+  logger: Logger,
+): void {
   const handlersMap: Record<
     GithubApiErrorTypesEnum,
     (err: GithubApiError, res: Response) => void
@@ -22,7 +27,7 @@ export function handleGithubApiError(err: GithubApiError, res: Response): void {
       });
     },
     [GithubApiErrorTypesEnum.other]: (err, res) => {
-      console.error(err);
+      logger.error({ err }, 'Unexpected GitHub API error');
       res.status(500).json({ message: 'Unexpected server error' });
     },
   };

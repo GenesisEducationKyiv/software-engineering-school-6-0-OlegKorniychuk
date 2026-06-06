@@ -1,23 +1,29 @@
 import 'dotenv/config';
 import type { Express } from 'express';
 
-import app from './app.js';
-import { scannerCron, shutdownDependencies } from './dependencies-container.js';
+import { createApp, createMetricsApp } from './app.js';
+import {
+  metricsCollector,
+  scannerCron,
+  shutdownDependencies,
+} from './dependencies-container.js';
 import type { ScannerCron } from './cron/scanner-cron.js';
 import { env } from './config/envs.js';
-import { startPrometheus } from './prometheus.js';
+import { logger } from './utils/logger.js';
 
 const startServer = async (app: Express, scannerCron: ScannerCron) => {
   if (process.env.NODE_ENV !== 'test') {
-    startPrometheus(app);
-    console.log('Starting background jobs...');
+    logger.info('Starting background jobs...');
     await scannerCron.startSchedule();
   }
 
   return app.listen(env.PORT, () => {
-    console.log(`Server listening on port ${env.PORT}`);
+    logger.info(`Server listening on port ${env.PORT}`);
   });
 };
+
+const app = createApp(metricsCollector);
+const metricsApp = createMetricsApp();
 
 startServer(app, scannerCron)
   .then((server) => {
@@ -25,28 +31,28 @@ startServer(app, scannerCron)
 
     const shutdown = async (signal: string) => {
       if (isShuttingDown) {
-        console.log(
+        logger.info(
           `Received ${signal}, but shutdown is already in progress...`,
         );
         return;
       }
 
       isShuttingDown = true;
-      console.log(`\n${signal} received. Server shutting down...`);
+      logger.info(`${signal} received. Server shutting down...`);
 
       server.close(async (err) => {
         if (err) {
-          console.error('Error closing Express server:', err);
+          logger.error({ err }, 'Error closing Express server');
           process.exit(1);
         }
 
         try {
           await shutdownDependencies();
-          console.log('Server stopped gracefully.');
+          logger.info('Server stopped gracefully.');
 
           process.exit(0);
         } catch (dbErr) {
-          console.error('Error during dependency teardown:', dbErr);
+          logger.error({ err: dbErr }, 'Error during dependency teardown');
           process.exit(1);
         }
       });
@@ -56,6 +62,8 @@ startServer(app, scannerCron)
     process.on('SIGTERM', () => shutdown('SIGTERM'));
   })
   .catch((error) => {
-    console.error('Failed to start server:', error);
+    logger.error({ err: error }, 'Failed to start server');
     process.exit(1);
   });
+
+metricsApp.listen(3090, () => logger.info('Internal metrics running on 3090'));

@@ -1,20 +1,34 @@
-import express from 'express';
+import express, { type Express } from 'express';
 
-import morgan from 'morgan';
+import { pinoHttp } from 'pino-http';
 import router from './routes.js';
-import { handleError } from './utils/error-handling/handle-error.js';
+import { makeHandleError } from './utils/error-handling/handle-error.js';
+import { logger } from './utils/logger.js';
+import { makeMetricsMiddleware } from './utils/middlewares/metrics.middleware.js';
+import type { MetricsCollector } from './metrics-collector.js';
+import { startPrometheus } from './prometheus.js';
 
-const app = express();
+export function createApp(metricsCollector: MetricsCollector): Express {
+  const app = express();
 
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
+  if (process.env.NODE_ENV !== 'test') {
+    app.use(pinoHttp({ logger }));
+  }
+  app.use(express.json());
+  app.use(express.static('public'));
+  app.use(express.urlencoded({ extended: false }));
+  app.use(makeMetricsMiddleware(metricsCollector));
+
+  app.use(router);
+
+  app.use(makeHandleError(logger));
+
+  return app;
 }
-app.use(express.json());
-app.use(express.static('public'));
-app.use(express.urlencoded({ extended: false }));
 
-app.use(router);
+export function createMetricsApp(): Express {
+  const metricsApp = express();
+  startPrometheus(metricsApp);
 
-app.use(handleError);
-
-export default app;
+  return metricsApp;
+}

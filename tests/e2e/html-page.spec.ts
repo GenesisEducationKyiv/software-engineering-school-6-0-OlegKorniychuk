@@ -43,6 +43,9 @@ test.afterAll(async () => {
   if (pool) {
     await pool.end();
   }
+
+  const envFilePath = path.join(process.cwd(), '.env.e2e');
+  if (fs.existsSync(envFilePath)) fs.unlinkSync(envFilePath);
 });
 
 test.beforeEach(async () => {

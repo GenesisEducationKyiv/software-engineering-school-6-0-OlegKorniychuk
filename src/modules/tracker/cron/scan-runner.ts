@@ -1,13 +1,13 @@
 import type { Logger } from 'pino';
 import type { RepoRepository } from '../repository/repo-repository.interface.js';
 import type { ReleaseCheckerService } from '../scanner/release-checker.service.interface.js';
-import type { NotificationDispatcher } from '../../../services/notifier/notification-dispatcher.interface.js';
+import type { NotificationFacade } from '../../notification/notification.facade.js';
 
 export class ScanRunner {
   constructor(
     private readonly githubRepoRepository: RepoRepository,
     private readonly releaseChecker: ReleaseCheckerService,
-    private readonly notificationDispatcher: NotificationDispatcher,
+    private readonly notification: NotificationFacade,
     private readonly logger: Logger,
   ) {}
 
@@ -27,12 +27,11 @@ export class ScanRunner {
             `[Scanner]: Found new release for ${repo.name}: ${newReleaseTag}`,
           );
 
-          const queuedCount =
-            await this.notificationDispatcher.dispatchNotifications(
-              repo.id,
-              repo.name,
-              newReleaseTag,
-            );
+          const queuedCount = await this.notification.dispatchToSubscribers(
+            repo.id,
+            repo.name,
+            newReleaseTag,
+          );
 
           totalEmailsQueued += queuedCount;
         }

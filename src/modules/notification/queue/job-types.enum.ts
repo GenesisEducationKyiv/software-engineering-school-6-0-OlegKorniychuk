@@ -1,4 +1,4 @@
-import type { EnumFromRecord } from '../../shared/utils/enum-from-record.js';
+import type { EnumFromRecord } from '../../../shared/utils/enum-from-record.js';
 
 export const JobTypesEnum = {
   sendConfirmation: 'send-confirmation',

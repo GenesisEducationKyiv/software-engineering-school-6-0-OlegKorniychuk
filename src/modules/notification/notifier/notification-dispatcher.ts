@@ -1,6 +1,6 @@
-import type { SubscriptionRepository } from '../../repositories/subscription/subscription.repository.interface.js';
-import type { EmailQueueClient } from '../email-queue/email-queue.service.interface.js';
-import type { NotificationTokensService } from '../notification-tokens-service/notification-tokens.service.interface.js';
+import type { SubscriptionRepository } from '../../../repositories/subscription/subscription.repository.interface.js';
+import type { EmailQueueClient } from '../queue/email-queue.service.interface.js';
+import type { NotificationTokensService } from '../../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import type { NotificationDispatcher } from './notification-dispatcher.interface.js';
 
 export class NotificationDispatcherImplementation implements NotificationDispatcher {

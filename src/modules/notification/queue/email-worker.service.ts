@@ -2,7 +2,7 @@ import { Worker, type Job } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
 import { Queues } from './queues.enum.js';
-import type { MetricsCollector } from '../../shared/metrics/metrics-collector.js';
+import type { MetricsCollector } from '../../../shared/metrics/metrics-collector.js';
 
 export type JobHandler = (job: Job) => Promise<void>;
 

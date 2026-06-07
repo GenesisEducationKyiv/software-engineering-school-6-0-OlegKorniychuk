@@ -15,17 +15,18 @@ import { ScannerCron } from './modules/tracker/cron/scanner-cron.js';
 import { TrackerFacade } from './modules/tracker/tracker.facade.js';
 import { SubscriptionRepositoryImplementation } from './repositories/subscription/subscription.repository.js';
 import { CacheServiceImplementation } from './shared/cache/cache.service.js';
-import { EmailQueueClientImplementation } from './services/email-queue/email-queue.service.js';
-import { EmailWorker } from './services/email-queue/email-worker.service.js';
-import { NotificationTokensServiceImplementation } from './services/notification-tokens-service/notification-tokens.service.js';
-import { EmailNotifierStrategy } from './services/notifier/email.strategy.js';
-import { NodemailerClient } from './services/notifier/nodemailer-client.js';
-import { NotificationDispatcherImplementation } from './services/notifier/notification-dispatcher.js';
-import { JobTypesEnum } from './services/email-queue/job-types.enum.js';
+import { EmailQueueClientImplementation } from './modules/notification/queue/email-queue.service.js';
+import { EmailWorker } from './modules/notification/queue/email-worker.service.js';
+import { JobTypesEnum } from './modules/notification/queue/job-types.enum.js';
 import type {
   SendConfirmationEmailPayload,
   SendNotificationEmailPayload,
-} from './services/email-queue/email-queue.service.interface.js';
+} from './modules/notification/queue/email-queue.service.interface.js';
+import { EmailNotifierStrategy } from './modules/notification/notifier/email.strategy.js';
+import { NodemailerClient } from './modules/notification/notifier/nodemailer-client.js';
+import { NotificationDispatcherImplementation } from './modules/notification/notifier/notification-dispatcher.js';
+import { NotificationFacade } from './modules/notification/notification.facade.js';
+import { NotificationTokensServiceImplementation } from './services/notification-tokens-service/notification-tokens.service.js';
 
 export const metricsCollector = new MetricsCollector();
 
@@ -67,6 +68,10 @@ const notificationDispatcher = new NotificationDispatcherImplementation(
   tokensService,
   emailQueue,
 );
+const notificationFacade = new NotificationFacade(
+  emailQueue,
+  notificationDispatcher,
+);
 
 // Services & Controllers
 export const cacheService = new CacheServiceImplementation(
@@ -79,7 +84,7 @@ export const subscriptionService = new SubscriptionServiceImplementation(
   githubRepoRepository,
   trackerFacade,
   tokensService,
-  emailQueue,
+  notificationFacade,
   cacheService,
 );
 
@@ -92,7 +97,7 @@ export const subscriptionController = new SubscriptionController(
 const scanRunner = new ScanRunner(
   githubRepoRepository,
   releaseChecker,
-  notificationDispatcher,
+  notificationFacade,
   logger,
 );
 

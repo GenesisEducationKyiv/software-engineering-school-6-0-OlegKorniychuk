@@ -4,7 +4,7 @@ import type {
   SubscriptionWithRepository,
 } from '../../repositories/subscription/subscription.repository.interface.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
-import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.ts';
+import type { NotificationFacade } from '../notification/notification.facade.js';
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
 import type { TrackerFacade } from '../tracker/tracker.facade.js';
@@ -20,7 +20,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     private readonly githubRepoRepository: RepoRepository,
     private readonly tracker: TrackerFacade,
     private readonly tokensService: NotificationTokensService,
-    private readonly emailQueue: EmailQueueClient,
+    private readonly notification: NotificationFacade,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -60,10 +60,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
       subscription.id,
     );
 
-    await this.emailQueue.queueConfirmationEmail({
-      email,
-      token: confirmToken,
-    });
+    await this.notification.queueConfirmationEmail(email, confirmToken);
   }
 
   public async confirmSubscription(token: string): Promise<void> {

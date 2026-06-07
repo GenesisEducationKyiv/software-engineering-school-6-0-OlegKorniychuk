@@ -10,7 +10,7 @@ import type {
 } from '../../repositories/subscription/subscription.repository.interface.js';
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import type { TrackerFacade } from '../tracker/tracker.facade.js';
-import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.js';
+import type { NotificationFacade } from '../notification/notification.facade.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { GithubRepo } from '../tracker/repository/github-repo.types.js';
 import type { Subscription } from '../../repositories/subscription/subscription.types.js';
@@ -23,7 +23,7 @@ describe('SubscriptionService', () => {
   let mockGithubRepo: jest.Mocked<RepoRepository>;
   let mockTracker: jest.Mocked<TrackerFacade>;
   let mockTokensService: jest.Mocked<NotificationTokensService>;
-  let mockEmailQueue: jest.Mocked<EmailQueueClient>;
+  let mockNotification: jest.Mocked<NotificationFacade>;
   let mockCacheService: jest.Mocked<CacheService>;
 
   beforeEach(() => {
@@ -49,10 +49,9 @@ describe('SubscriptionService', () => {
       validateToken: jest.fn(),
     } as unknown as jest.Mocked<NotificationTokensService>;
 
-    mockEmailQueue = {
+    mockNotification = {
       queueConfirmationEmail: jest.fn(),
-      queueNotificationEmail: jest.fn(),
-    } as unknown as jest.Mocked<EmailQueueClient>;
+    } as unknown as jest.Mocked<NotificationFacade>;
 
     mockCacheService = {
       get: jest.fn(),
@@ -65,7 +64,7 @@ describe('SubscriptionService', () => {
       mockGithubRepo,
       mockTracker,
       mockTokensService,
-      mockEmailQueue,
+      mockNotification,
       mockCacheService,
     );
   });
@@ -105,10 +104,10 @@ describe('SubscriptionService', () => {
       expect(mockTokensService.generateConfirmToken).toHaveBeenCalledWith(
         mockSubId,
       );
-      expect(mockEmailQueue.queueConfirmationEmail).toHaveBeenCalledWith({
-        email: mockEmail,
-        token: mockToken,
-      });
+      expect(mockNotification.queueConfirmationEmail).toHaveBeenCalledWith(
+        mockEmail,
+        mockToken,
+      );
     });
 
     it('should verify repository and create it if not found in DB', async () => {

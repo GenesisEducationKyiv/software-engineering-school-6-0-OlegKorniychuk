@@ -7,7 +7,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/migrate.js && node dist/server.js",
+    "start:tracker": "node dist/tracker-server.js",
     "dev": "tsx watch src/server.ts",
+    "dev:tracker": "tsx watch src/tracker-server.ts",
     "migration:generate": "drizzle-kit generate --config drizzle.config.ts",
     "migration:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "test": "npm run test:unit && npm run test:integration && npm run test:e2e",

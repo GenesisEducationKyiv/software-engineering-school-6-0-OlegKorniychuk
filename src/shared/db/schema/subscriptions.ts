@@ -5,16 +5,13 @@ import {
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
-import { githubRepositories } from './repositories.js';
 
 export const subscriptions = pgTable(
   'subscriptions',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     email: varchar('email').notNull(),
-    githubRepositoryId: uuid('github_repository_id')
-      .references(() => githubRepositories.id)
-      .notNull(),
+    githubRepositoryId: uuid('github_repository_id').notNull(),
     confirmed: boolean('confirmed').default(false).notNull(),
   },
   (table) => [

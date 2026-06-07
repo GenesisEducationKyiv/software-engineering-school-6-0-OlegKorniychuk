@@ -7,7 +7,7 @@ if (!dbUrl) throw new Error('Database connection url not specified!');
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/db/schema/*',
+  schema: './src/shared/db/schema/*',
   dbCredentials: {
     url: dbUrl,
   },

@@ -1,15 +1,13 @@
 import type { Logger } from 'pino';
 import type { RepoRepository } from '../repository/repo-repository.interface.js';
 import type { ReleaseCheckerService } from '../scanner/release-checker.service.interface.js';
-import type { NotificationFacade } from '../../notification/notification.facade.js';
-import type { SubscriptionFacade } from '../../subscription/subscription.facade.js';
+import type { ReleasePublisher } from '../release-publisher.js';
 
 export class ScanRunner {
   constructor(
     private readonly githubRepoRepository: RepoRepository,
     private readonly releaseChecker: ReleaseCheckerService,
-    private readonly notification: NotificationFacade,
-    private readonly subscription: SubscriptionFacade,
+    private readonly releasePublisher: ReleasePublisher,
     private readonly logger: Logger,
   ) {}
 
@@ -17,7 +15,7 @@ export class ScanRunner {
     this.logger.info('[Scanner]: Starting periodic release scan...');
 
     const repos = await this.githubRepoRepository.findAll();
-    let totalEmailsQueued = 0;
+    let totalPublished = 0;
 
     for (const repo of repos) {
       try {
@@ -29,16 +27,12 @@ export class ScanRunner {
             `[Scanner]: Found new release for ${repo.name}: ${newReleaseTag}`,
           );
 
-          const subscribers =
-            await this.subscription.getConfirmedSubscribersWithTokens(repo.id);
-
-          const queuedCount = await this.notification.dispatchToSubscribers(
-            subscribers,
+          await this.releasePublisher.publish(
+            repo.id,
             repo.name,
             newReleaseTag,
           );
-
-          totalEmailsQueued += queuedCount;
+          totalPublished++;
         }
       } catch (error) {
         this.logger.error(
@@ -49,7 +43,7 @@ export class ScanRunner {
     }
 
     this.logger.info(
-      { queuedEmails: totalEmailsQueued },
+      { publishedEvents: totalPublished },
       `[Scanner]: Scan complete.`,
     );
   }

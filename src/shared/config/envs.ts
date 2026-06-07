@@ -18,6 +18,8 @@ const envSchema = z
       .min(1, 'NOTIFICATION_TOKEN_SECRET is required'),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     API_KEY: z.string().min(1, 'API_KEY is required'),
+    TRACKER_SERVICE_URL: z.string().min(1, 'TRACKER_SERVICE_URL is required'),
+    TRACKER_API_KEY: z.string().min(1, 'TRACKER_API_KEY is required'),
   })
   .and(
     z.union([

@@ -2,12 +2,14 @@ import type { Logger } from 'pino';
 import type { RepoRepository } from '../repository/repo-repository.interface.js';
 import type { ReleaseCheckerService } from '../scanner/release-checker.service.interface.js';
 import type { NotificationFacade } from '../../notification/notification.facade.js';
+import type { SubscriptionFacade } from '../../subscription/subscription.facade.js';
 
 export class ScanRunner {
   constructor(
     private readonly githubRepoRepository: RepoRepository,
     private readonly releaseChecker: ReleaseCheckerService,
     private readonly notification: NotificationFacade,
+    private readonly subscription: SubscriptionFacade,
     private readonly logger: Logger,
   ) {}
 
@@ -27,8 +29,11 @@ export class ScanRunner {
             `[Scanner]: Found new release for ${repo.name}: ${newReleaseTag}`,
           );
 
+          const subscribers =
+            await this.subscription.getConfirmedSubscribersWithTokens(repo.id);
+
           const queuedCount = await this.notification.dispatchToSubscribers(
-            repo.id,
+            subscribers,
             repo.name,
             newReleaseTag,
           );

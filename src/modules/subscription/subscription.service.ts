@@ -2,11 +2,12 @@ import type { RepoRepository } from '../tracker/repository/repo-repository.inter
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
-} from '../../repositories/subscription/subscription.repository.interface.js';
+} from './repository/subscription.repository.interface.js';
+import type { Subscription } from './repository/subscription.types.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { NotificationFacade } from '../notification/notification.facade.js';
-import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
-import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
+import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
+import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
 import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import {
   AppError,
@@ -117,5 +118,11 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     email: string,
   ): Promise<SubscriptionWithRepository[]> {
     return await this.subscriptionRepository.findByEmailWithRepo(email);
+  }
+
+  public async getConfirmedSubscribersByRepo(
+    repoId: string,
+  ): Promise<Subscription[]> {
+    return await this.subscriptionRepository.findConfirmedByRepoId(repoId);
   }
 }

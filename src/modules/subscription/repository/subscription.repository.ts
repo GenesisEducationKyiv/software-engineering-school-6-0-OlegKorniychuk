@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
-import type { DrizzleClient } from '../../shared/db/client.js';
-import { subscriptions } from '../../shared/db/schema/subscriptions.js';
+import type { DrizzleClient } from '../../../shared/db/client.js';
+import { subscriptions } from '../../../shared/db/schema/subscriptions.js';
 import type { CreateSubscription, Subscription } from './subscription.types.js';
 import type {
   SubscriptionRepository,

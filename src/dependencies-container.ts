@@ -13,7 +13,7 @@ import { ReleaseCheckerServiceImplementation } from './modules/tracker/scanner/r
 import { ScanRunner } from './modules/tracker/cron/scan-runner.js';
 import { ScannerCron } from './modules/tracker/cron/scanner-cron.js';
 import { TrackerFacade } from './modules/tracker/tracker.facade.js';
-import { SubscriptionRepositoryImplementation } from './repositories/subscription/subscription.repository.js';
+import { SubscriptionRepositoryImplementation } from './modules/subscription/repository/subscription.repository.js';
 import { CacheServiceImplementation } from './shared/cache/cache.service.js';
 import { EmailQueueClientImplementation } from './modules/notification/queue/email-queue.service.js';
 import { EmailWorker } from './modules/notification/queue/email-worker.service.js';
@@ -26,7 +26,8 @@ import { EmailNotifierStrategy } from './modules/notification/notifier/email.str
 import { NodemailerClient } from './modules/notification/notifier/nodemailer-client.js';
 import { NotificationDispatcherImplementation } from './modules/notification/notifier/notification-dispatcher.js';
 import { NotificationFacade } from './modules/notification/notification.facade.js';
-import { NotificationTokensServiceImplementation } from './services/notification-tokens-service/notification-tokens.service.js';
+import { NotificationTokensServiceImplementation } from './modules/subscription/tokens/notification-tokens.service.js';
+import { SubscriptionFacade } from './modules/subscription/subscription.facade.js';
 
 export const metricsCollector = new MetricsCollector();
 
@@ -64,8 +65,6 @@ const releaseChecker = new ReleaseCheckerServiceImplementation(
   repoScanner,
 );
 const notificationDispatcher = new NotificationDispatcherImplementation(
-  subscriptionRepository,
-  tokensService,
   emailQueue,
 );
 const notificationFacade = new NotificationFacade(
@@ -88,6 +87,11 @@ export const subscriptionService = new SubscriptionServiceImplementation(
   cacheService,
 );
 
+const subscriptionFacade = new SubscriptionFacade(
+  subscriptionService,
+  tokensService,
+);
+
 export const subscriptionController = new SubscriptionController(
   subscriptionService,
   subscriptionMapper,
@@ -98,6 +102,7 @@ const scanRunner = new ScanRunner(
   githubRepoRepository,
   releaseChecker,
   notificationFacade,
+  subscriptionFacade,
   logger,
 );
 

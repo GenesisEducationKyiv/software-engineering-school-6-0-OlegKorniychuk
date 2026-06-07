@@ -1,4 +1,5 @@
-import type { SubscriptionWithRepository } from '../../repositories/subscription/subscription.repository.interface.js';
+import type { SubscriptionWithRepository } from './repository/subscription.repository.interface.js';
+import type { Subscription } from './repository/subscription.types.js';
 
 export interface SubscriptionService {
   getCacheKey(email: string): string;
@@ -10,4 +11,5 @@ export interface SubscriptionService {
   confirmSubscription(token: string): Promise<void>;
   unsubscribe(token: string): Promise<void>;
   getSubscriptions(email: string): Promise<SubscriptionWithRepository[]>;
+  getConfirmedSubscribersByRepo(repoId: string): Promise<Subscription[]>;
 }

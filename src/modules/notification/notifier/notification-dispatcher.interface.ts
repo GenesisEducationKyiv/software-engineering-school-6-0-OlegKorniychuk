@@ -1,6 +1,8 @@
+export type SubscriberInfo = { email: string; unsubscribeToken: string };
+
 export interface NotificationDispatcher {
   dispatchNotifications(
-    repoId: string,
+    subscribers: SubscriberInfo[],
     repoName: string,
     releaseTag: string,
   ): Promise<number>;

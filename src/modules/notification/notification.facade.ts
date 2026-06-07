@@ -1,5 +1,8 @@
 import type { EmailQueueClient } from './queue/email-queue.service.interface.js';
-import type { NotificationDispatcher } from './notifier/notification-dispatcher.interface.js';
+import type {
+  NotificationDispatcher,
+  SubscriberInfo,
+} from './notifier/notification-dispatcher.interface.js';
 
 export class NotificationFacade {
   constructor(
@@ -15,10 +18,14 @@ export class NotificationFacade {
   }
 
   public async dispatchToSubscribers(
-    repoId: string,
+    subscribers: SubscriberInfo[],
     repoName: string,
     releaseTag: string,
   ): Promise<number> {
-    return this.dispatcher.dispatchNotifications(repoId, repoName, releaseTag);
+    return this.dispatcher.dispatchNotifications(
+      subscribers,
+      repoName,
+      releaseTag,
+    );
   }
 }

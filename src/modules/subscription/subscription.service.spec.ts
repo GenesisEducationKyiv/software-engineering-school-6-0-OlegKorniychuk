@@ -1,20 +1,20 @@
 import { describe, expect, it, beforeEach, jest } from '@jest/globals';
 import { SubscriptionServiceImplementation } from './subscription.service.js';
 import { AppErrorTypesEnum } from '../../shared/utils/error-handling/errors/app.error.js';
-import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
+import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
 
 import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
-} from '../../repositories/subscription/subscription.repository.interface.js';
-import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
+} from './repository/subscription.repository.interface.js';
+import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
 import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import type { NotificationFacade } from '../notification/notification.facade.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { GithubRepo } from '../tracker/repository/github-repo.types.js';
-import type { Subscription } from '../../repositories/subscription/subscription.types.js';
-import type { NotificationTokenPayload } from '../../services/notification-tokens-service/notification-tokens.types.js';
+import type { Subscription } from './repository/subscription.types.js';
+import type { NotificationTokenPayload } from './tokens/notification-tokens.types.js';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionServiceImplementation;

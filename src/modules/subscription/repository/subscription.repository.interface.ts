@@ -1,5 +1,5 @@
 import type { CreateSubscription, Subscription } from './subscription.types.js';
-import type { GithubRepo } from '../../modules/tracker/repository/github-repo.types.js';
+import type { GithubRepo } from '../../tracker/repository/github-repo.types.js';
 
 export interface SubscriptionWithRepository extends Subscription {
   githubRepository: GithubRepo;

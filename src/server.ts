@@ -7,7 +7,7 @@ import {
   scannerCron,
   shutdownDependencies,
 } from './dependencies-container.js';
-import type { ScannerCron } from './cron/scanner-cron.js';
+import type { ScannerCron } from './modules/tracker/cron/scanner-cron.js';
 import { env } from './shared/config/envs.js';
 import { logger } from './shared/utils/logger.js';
 

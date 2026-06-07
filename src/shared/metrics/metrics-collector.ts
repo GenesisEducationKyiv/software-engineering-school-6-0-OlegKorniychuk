@@ -1,5 +1,5 @@
 import { Counter, Histogram } from 'prom-client';
-import type { GithubApiResponse } from '../../services/scanner/github.types.js';
+import type { GithubApiResponse } from '../../modules/tracker/github-api/github.types.js';
 
 export class MetricsCollector {
   private readonly httpRequestsTotal = new Counter<string>({

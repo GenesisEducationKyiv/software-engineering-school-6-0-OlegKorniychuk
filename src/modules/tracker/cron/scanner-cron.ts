@@ -1,9 +1,9 @@
 import { Queue, Worker } from 'bullmq';
 import type { Redis } from 'ioredis';
 import type { Logger } from 'pino';
-import { Queues } from '../services/email-queue/queues.enum.js';
+import { Queues } from '../../../services/email-queue/queues.enum.js';
 import type { ScanRunner } from './scan-runner.js';
-import type { MetricsCollector } from '../shared/metrics/metrics-collector.js';
+import type { MetricsCollector } from '../../../shared/metrics/metrics-collector.js';
 
 export class ScannerCron {
   public readonly queue: Queue;

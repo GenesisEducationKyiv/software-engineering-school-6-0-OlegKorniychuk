@@ -3,13 +3,13 @@ import { RepositoryScannerImplementation } from './repository-scanner.service.js
 import {
   GithubApiError,
   GithubApiErrorTypesEnum,
-} from '../../shared/utils/error-handling/errors/github-api.error.js';
-import type { GithubApi } from './github-api.interface.js';
+} from '../../../shared/utils/error-handling/errors/github-api.error.js';
+import type { GithubApi } from '../github-api/github-api.interface.js';
 import type {
   GithubApiResponse,
   GitHubRelease,
   GitHubRepository,
-} from './github.types.js';
+} from '../github-api/github.types.js';
 
 describe('RepositoryScanner', () => {
   let scanner: RepositoryScannerImplementation;

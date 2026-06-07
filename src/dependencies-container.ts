@@ -1,14 +1,18 @@
 import { env } from './shared/config/envs.js';
 import { logger } from './shared/utils/logger.js';
 import { MetricsCollector } from './shared/metrics/metrics-collector.js';
-import { ScanRunner } from './cron/scan-runner.js';
-import { ScannerCron } from './cron/scanner-cron.js';
 import { drizzleClient, pool } from './shared/db/client.js';
 import { SubscriptionController } from './modules/subscription/subscription.controller.js';
 import { subscriptionMapper } from './modules/subscription/subscription.mapper.js';
 import { SubscriptionServiceImplementation } from './modules/subscription/subscription.service.js';
 import { redisConnection } from './shared/redis/redis.js';
-import { GithubRepoRepository } from './repositories/github-repo/github-repo.repository.js';
+import { GithubRepoRepository } from './modules/tracker/repository/github-repo.repository.js';
+import { GithubApiImplementation } from './modules/tracker/github-api/github-api.js';
+import { RepositoryScannerImplementation } from './modules/tracker/scanner/repository-scanner.service.js';
+import { ReleaseCheckerServiceImplementation } from './modules/tracker/scanner/release-checker.service.js';
+import { ScanRunner } from './modules/tracker/cron/scan-runner.js';
+import { ScannerCron } from './modules/tracker/cron/scanner-cron.js';
+import { TrackerFacade } from './modules/tracker/tracker.facade.js';
 import { SubscriptionRepositoryImplementation } from './repositories/subscription/subscription.repository.js';
 import { CacheServiceImplementation } from './shared/cache/cache.service.js';
 import { EmailQueueClientImplementation } from './services/email-queue/email-queue.service.js';
@@ -16,9 +20,6 @@ import { EmailWorker } from './services/email-queue/email-worker.service.js';
 import { NotificationTokensServiceImplementation } from './services/notification-tokens-service/notification-tokens.service.js';
 import { EmailNotifierStrategy } from './services/notifier/email.strategy.js';
 import { NodemailerClient } from './services/notifier/nodemailer-client.js';
-import { GithubApiImplementation } from './services/scanner/github-api.js';
-import { RepositoryScannerImplementation } from './services/scanner/repository-scanner.service.js';
-import { ReleaseCheckerServiceImplementation } from './services/scanner/release-checker.service.js';
 import { NotificationDispatcherImplementation } from './services/notifier/notification-dispatcher.js';
 import { JobTypesEnum } from './services/email-queue/job-types.enum.js';
 import type {
@@ -38,6 +39,7 @@ const githubApi = new GithubApiImplementation(
   metricsCollector,
 );
 const repoScanner = new RepositoryScannerImplementation(githubApi);
+const trackerFacade = new TrackerFacade(repoScanner);
 
 // Utilities & Clients
 export const tokensService = new NotificationTokensServiceImplementation(
@@ -75,7 +77,7 @@ export const cacheService = new CacheServiceImplementation(
 export const subscriptionService = new SubscriptionServiceImplementation(
   subscriptionRepository,
   githubRepoRepository,
-  repoScanner,
+  trackerFacade,
   tokensService,
   emailQueue,
   cacheService,

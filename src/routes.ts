@@ -10,7 +10,7 @@ import {
   subscriptionController,
   subscriptionService,
 } from './dependencies-container.js';
-import { routeCache } from './services/cache/cache.middleware.js';
+import { routeCache } from './shared/cache/cache.middleware.js';
 import { logger } from './shared/utils/logger.js';
 import { requireApiKey } from './shared/auth/api-key.middleware.js';
 import { parseRepositoryString } from './modules/subscription/parse-repository.middleware.js';

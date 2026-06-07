@@ -3,16 +3,16 @@ import { SubscriptionServiceImplementation } from './subscription.service.js';
 import { AppErrorTypesEnum } from '../../shared/utils/error-handling/errors/app.error.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
 
-import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
+import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
 } from '../../repositories/subscription/subscription.repository.interface.js';
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
-import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.interface.js';
+import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
-import type { GithubRepo } from '../../repositories/github-repo/github-repo.types.js';
+import type { GithubRepo } from '../tracker/repository/github-repo.types.js';
 import type { Subscription } from '../../repositories/subscription/subscription.types.js';
 import type { NotificationTokenPayload } from '../../services/notification-tokens-service/notification-tokens.types.js';
 
@@ -21,7 +21,7 @@ describe('SubscriptionService', () => {
 
   let mockSubscriptionRepo: jest.Mocked<SubscriptionRepository>;
   let mockGithubRepo: jest.Mocked<RepoRepository>;
-  let mockRepoScanner: jest.Mocked<RepositoryScanner>;
+  let mockTracker: jest.Mocked<TrackerFacade>;
   let mockTokensService: jest.Mocked<NotificationTokensService>;
   let mockEmailQueue: jest.Mocked<EmailQueueClient>;
   let mockCacheService: jest.Mocked<CacheService>;
@@ -40,9 +40,9 @@ describe('SubscriptionService', () => {
       createOne: jest.fn(),
     } as unknown as jest.Mocked<RepoRepository>;
 
-    mockRepoScanner = {
+    mockTracker = {
       verifyRepository: jest.fn(),
-    } as unknown as jest.Mocked<RepositoryScanner>;
+    } as unknown as jest.Mocked<TrackerFacade>;
 
     mockTokensService = {
       generateConfirmToken: jest.fn(),
@@ -63,7 +63,7 @@ describe('SubscriptionService', () => {
     service = new SubscriptionServiceImplementation(
       mockSubscriptionRepo,
       mockGithubRepo,
-      mockRepoScanner,
+      mockTracker,
       mockTokensService,
       mockEmailQueue,
       mockCacheService,
@@ -96,7 +96,7 @@ describe('SubscriptionService', () => {
       await service.subscribe(mockEmail, mockOwner, mockRepoName);
 
       expect(mockGithubRepo.findByName).toHaveBeenCalledWith(mockRepoFullName);
-      expect(mockRepoScanner.verifyRepository).not.toHaveBeenCalled();
+      expect(mockTracker.verifyRepository).not.toHaveBeenCalled();
       expect(mockGithubRepo.createOne).not.toHaveBeenCalled();
       expect(mockSubscriptionRepo.createOne).toHaveBeenCalledWith({
         email: mockEmail,
@@ -113,7 +113,7 @@ describe('SubscriptionService', () => {
 
     it('should verify repository and create it if not found in DB', async () => {
       mockGithubRepo.findByName.mockResolvedValueOnce(null);
-      mockRepoScanner.verifyRepository.mockResolvedValueOnce();
+      mockTracker.verifyRepository.mockResolvedValueOnce();
       mockGithubRepo.createOne.mockResolvedValueOnce({
         id: mockRepoId,
         name: mockRepoFullName,
@@ -127,7 +127,7 @@ describe('SubscriptionService', () => {
 
       await service.subscribe(mockEmail, mockOwner, mockRepoName);
 
-      expect(mockRepoScanner.verifyRepository).toHaveBeenCalledWith(
+      expect(mockTracker.verifyRepository).toHaveBeenCalledWith(
         mockOwner,
         mockRepoName,
       );

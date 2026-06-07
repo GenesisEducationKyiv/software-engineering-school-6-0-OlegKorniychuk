@@ -1,4 +1,4 @@
-import type { GitHubRelease } from './github.types.js';
+import type { GitHubRelease } from '../github-api/github.types.js';
 
 export interface RepositoryScanner {
   verifyRepository(owner: string, repo: string): Promise<void>;

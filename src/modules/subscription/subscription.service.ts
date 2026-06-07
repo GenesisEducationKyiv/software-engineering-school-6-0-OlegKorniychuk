@@ -1,4 +1,4 @@
-import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
+import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
@@ -7,7 +7,7 @@ import type { CacheService } from '../../shared/cache/cache.service.interface.js
 import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.ts';
 import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
 import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
-import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.interface.js';
+import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import {
   AppError,
   AppErrorTypesEnum,
@@ -18,7 +18,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly githubRepoRepository: RepoRepository,
-    private readonly repoScanner: RepositoryScanner,
+    private readonly tracker: TrackerFacade,
     private readonly tokensService: NotificationTokensService,
     private readonly emailQueue: EmailQueueClient,
     private readonly cacheService: CacheService,
@@ -37,7 +37,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     let repo = await this.githubRepoRepository.findByName(repoFullName);
 
     if (!repo) {
-      await this.repoScanner.verifyRepository(owner, repositoryName);
+      await this.tracker.verifyRepository(owner, repositoryName);
       repo = await this.githubRepoRepository.createOne({ name: repoFullName });
     } else {
       const existingSubscription =

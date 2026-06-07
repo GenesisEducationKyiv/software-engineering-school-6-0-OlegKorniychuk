@@ -4,7 +4,7 @@ import type {
   GitHubRelease,
   GitHubRepository,
 } from './github.types.js';
-import type { MetricsCollector } from '../../shared/metrics/metrics-collector.js';
+import type { MetricsCollector } from '../../../shared/metrics/metrics-collector.js';
 
 export class GithubApiImplementation implements GithubApi {
   private readonly baseUrl = 'https://api.github.com';

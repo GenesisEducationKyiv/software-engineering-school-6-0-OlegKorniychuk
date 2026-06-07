@@ -1,7 +1,7 @@
 import type { Logger } from 'pino';
-import type { RepoRepository } from '../repositories/repo-repository.interface.js';
-import type { ReleaseCheckerService } from '../services/scanner/release-checker.service.interface.js';
-import type { NotificationDispatcher } from '../services/notifier/notification-dispatcher.interface.js';
+import type { RepoRepository } from '../repository/repo-repository.interface.js';
+import type { ReleaseCheckerService } from '../scanner/release-checker.service.interface.js';
+import type { NotificationDispatcher } from '../../../services/notifier/notification-dispatcher.interface.js';
 
 export class ScanRunner {
   constructor(

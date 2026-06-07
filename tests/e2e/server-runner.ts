@@ -30,6 +30,8 @@ async function start() {
   process.env.API_KEY = 'secret-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
+  process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
+  process.env.TRACKER_API_KEY = 'secret-api-key';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
   process.env.PORT = '3002';

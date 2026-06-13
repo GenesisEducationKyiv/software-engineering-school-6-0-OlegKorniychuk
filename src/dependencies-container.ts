@@ -111,17 +111,19 @@ emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
 });
 
 export const releaseDetectedWorker = new ReleaseDetectedWorker(
-  redisConnection,
+  env.RABBITMQ_URL,
   subscriptionFacade,
   notificationFacade,
   logger,
 );
 
+export const initNotificationRabbitMQ = () => releaseDetectedWorker.start();
+
 export const shutdownDependencies = async () => {
   logger.info('Closing background workers and queues...');
 
   await emailWorker.worker.close();
-  await releaseDetectedWorker.worker.close();
+  await releaseDetectedWorker.close();
   await emailQueue.queue.close();
 
   logger.info('Closing database connections...');

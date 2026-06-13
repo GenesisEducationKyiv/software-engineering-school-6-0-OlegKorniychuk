@@ -4,6 +4,7 @@ const trackerEnvSchema = z.object({
   TRACKER_PORT: z.coerce.number().default(3001),
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
+  RABBITMQ_URL: z.string().min(1, 'RABBITMQ_URL is required'),
   GITHUB_TOKEN: z.string().min(1, 'GITHUB_TOKEN is required'),
   API_KEY: z.string().min(1, 'API_KEY is required'),
 });

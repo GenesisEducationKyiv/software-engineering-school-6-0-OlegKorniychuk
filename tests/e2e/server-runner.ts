@@ -16,6 +16,9 @@ async function start() {
     .start();
 
   const redisContainer = await new RedisContainer('redis:7-alpine').start();
+  const rabbitmqContainer = await new GenericContainer('rabbitmq:3-alpine')
+    .withExposedPorts(5672)
+    .start();
   const mailpitContainer = await new GenericContainer('axllent/mailpit')
     .withExposedPorts(1025, 8025)
     .start();
@@ -30,6 +33,7 @@ async function start() {
   process.env.API_KEY = 'secret-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
+  process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
   process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
   process.env.TRACKER_API_KEY = 'secret-api-key';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
@@ -61,6 +65,8 @@ async function start() {
     console.error('Worker connection error:', err);
   });
 
+  await deps.initNotificationRabbitMQ();
+
   const { createApp } = await import('../../src/app.js');
   const app = createApp(deps.metricsCollector);
 
@@ -71,6 +77,7 @@ async function start() {
     await deps.shutdownDependencies();
     await pgContainer.stop();
     await redisContainer.stop();
+    await rabbitmqContainer.stop();
     await mailpitContainer.stop();
     mockGithubServer.close();
     process.exit(0);

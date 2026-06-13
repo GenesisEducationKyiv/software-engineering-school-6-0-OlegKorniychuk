@@ -1,0 +1,1 @@
+ALTER TABLE "subscriptions" DROP CONSTRAINT "subscriptions_github_repository_id_github_repositories_id_fkey";

@@ -1,48 +1,54 @@
-import { env } from './config/envs.js';
-import { logger } from './utils/logger.js';
-import { MetricsCollector } from './metrics-collector.js';
-import { ScanRunner } from './cron/scan-runner.js';
-import { ScannerCron } from './cron/scanner-cron.js';
-import { drizzleClient, pool } from './db/client.js';
+import { env } from './shared/config/envs.js';
+import { logger } from './shared/utils/logger.js';
+import { MetricsCollector } from './shared/metrics/metrics-collector.js';
+import { drizzleClient, pool } from './shared/db/client.js';
 import { SubscriptionController } from './modules/subscription/subscription.controller.js';
 import { subscriptionMapper } from './modules/subscription/subscription.mapper.js';
 import { SubscriptionServiceImplementation } from './modules/subscription/subscription.service.js';
-import { redisConnection } from './redis/redis.js';
-import { GithubRepoRepository } from './repositories/github-repo/github-repo.repository.js';
-import { SubscriptionRepositoryImplementation } from './repositories/subscription/subscription.repository.js';
-import { CacheServiceImplementation } from './services/cache/cache.service.js';
-import { EmailQueueClientImplementation } from './services/email-queue/email-queue.service.js';
-import { EmailWorker } from './services/email-queue/email-worker.service.js';
-import { NotificationTokensServiceImplementation } from './services/notification-tokens-service/notification-tokens.service.js';
-import { EmailNotifierStrategy } from './services/notifier/email.strategy.js';
-import { NodemailerClient } from './services/notifier/nodemailer-client.js';
-import { GithubApiImplementation } from './services/scanner/github-api.js';
-import { RepositoryScannerImplementation } from './services/scanner/repository-scanner.service.js';
-import { ReleaseCheckerServiceImplementation } from './services/scanner/release-checker.service.js';
-import { NotificationDispatcherImplementation } from './services/notifier/notification-dispatcher.js';
-import { JobTypesEnum } from './services/email-queue/job-types.enum.js';
+import { SubscriptionFacade } from './modules/subscription/subscription.facade.js';
+import { redisConnection } from './shared/redis/redis.js';
+import { GithubRepoRepository } from './modules/tracker/repository/github-repo.repository.js';
+import { TrackerFacade } from './modules/tracker/tracker.facade.js';
+import { SubscriptionRepositoryImplementation } from './modules/subscription/repository/subscription.repository.js';
+import { CacheServiceImplementation } from './shared/cache/cache.service.js';
+import { EmailQueueClientImplementation } from './modules/notification/queue/email-queue.service.js';
+import { EmailWorker } from './modules/notification/queue/email-worker.service.js';
+import { JobTypesEnum } from './modules/notification/queue/job-types.enum.js';
 import type {
   SendConfirmationEmailPayload,
   SendNotificationEmailPayload,
-} from './services/email-queue/email-queue.service.interface.js';
+} from './modules/notification/queue/email-queue.service.interface.js';
+import { EmailNotifierStrategy } from './modules/notification/notifier/email.strategy.js';
+import { NodemailerClient } from './modules/notification/notifier/nodemailer-client.js';
+import { NotificationDispatcherImplementation } from './modules/notification/notifier/notification-dispatcher.js';
+import { NotificationFacade } from './modules/notification/notification.facade.js';
+import { ReleaseDetectedWorker } from './modules/notification/release-detected-worker.js';
+import { NotificationTokensServiceImplementation } from './modules/subscription/tokens/notification-tokens.service.js';
 
 export const metricsCollector = new MetricsCollector();
 
-// Repositories & APIs
+// Repositories
 const subscriptionRepository = new SubscriptionRepositoryImplementation(
   drizzleClient,
 );
 const githubRepoRepository = new GithubRepoRepository(drizzleClient);
-const githubApi = new GithubApiImplementation(
-  env.GITHUB_TOKEN,
-  metricsCollector,
-);
-const repoScanner = new RepositoryScannerImplementation(githubApi);
 
-// Utilities & Clients
+// Tracker facade — HTTP client to tracker service
+const trackerFacade = new TrackerFacade(
+  env.TRACKER_SERVICE_URL,
+  env.TRACKER_API_KEY,
+);
+
+// Tokens + cache
 export const tokensService = new NotificationTokensServiceImplementation(
   env.NOTIFICATION_TOKEN_SECRET,
 );
+export const cacheService = new CacheServiceImplementation(
+  redisConnection,
+  logger,
+);
+
+// Notification
 const mailClient = new NodemailerClient({
   auth: {
     user: env.EMAIL_SERVICE_USERNAME,
@@ -54,31 +60,27 @@ const mailClient = new NodemailerClient({
 });
 const notifier = new EmailNotifierStrategy(mailClient, 'http://localhost:3000');
 const emailQueue = new EmailQueueClientImplementation(redisConnection);
-
-// New Services for ScanRunner
-const releaseChecker = new ReleaseCheckerServiceImplementation(
-  githubRepoRepository,
-  repoScanner,
-);
 const notificationDispatcher = new NotificationDispatcherImplementation(
-  subscriptionRepository,
-  tokensService,
   emailQueue,
 );
-
-// Services & Controllers
-export const cacheService = new CacheServiceImplementation(
-  redisConnection,
-  logger,
+const notificationFacade = new NotificationFacade(
+  emailQueue,
+  notificationDispatcher,
 );
 
+// Subscription
 export const subscriptionService = new SubscriptionServiceImplementation(
   subscriptionRepository,
   githubRepoRepository,
-  repoScanner,
+  trackerFacade,
   tokensService,
-  emailQueue,
+  notificationFacade,
   cacheService,
+);
+
+const subscriptionFacade = new SubscriptionFacade(
+  subscriptionService,
+  tokensService,
 );
 
 export const subscriptionController = new SubscriptionController(
@@ -86,21 +88,7 @@ export const subscriptionController = new SubscriptionController(
   subscriptionMapper,
 );
 
-// Background Jobs
-const scanRunner = new ScanRunner(
-  githubRepoRepository,
-  releaseChecker,
-  notificationDispatcher,
-  logger,
-);
-
-export const scannerCron = new ScannerCron(
-  redisConnection,
-  scanRunner,
-  logger,
-  metricsCollector,
-);
-
+// Workers
 export const emailWorker = new EmailWorker(
   redisConnection,
   logger,
@@ -122,17 +110,22 @@ emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
   );
 });
 
+export const releaseDetectedWorker = new ReleaseDetectedWorker(
+  redisConnection,
+  subscriptionFacade,
+  notificationFacade,
+  logger,
+);
+
 export const shutdownDependencies = async () => {
   logger.info('Closing background workers and queues...');
 
   await emailWorker.worker.close();
-  await scannerCron.worker.close();
-  await scannerCron.queue.close();
+  await releaseDetectedWorker.worker.close();
   await emailQueue.queue.close();
 
   logger.info('Closing database connections...');
 
   await redisConnection.quit();
-
   await pool.end();
 };

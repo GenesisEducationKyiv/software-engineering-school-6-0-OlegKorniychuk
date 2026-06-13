@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { sql } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
-import type { DrizzleClient } from '../../src/db/client.js';
+import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 
 let drizzleClient: DrizzleClient;

@@ -11,11 +11,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
-import { githubRepositories } from '../../src/db/schema/repositories.js';
-import { subscriptions } from '../../src/db/schema/subscriptions.js';
+import { githubRepositories } from '../../src/shared/db/schema/repositories.js';
+import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { Express } from 'express';
-import type { NotificationTokensService } from '../../src/services/notification-tokens-service/notification-tokens.service.interface.js';
-import type { DrizzleClient } from '../../src/db/client.js';
+import type { NotificationTokensService } from '../../src/modules/subscription/tokens/notification-tokens.service.interface.js';
+import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
 import { mockGithubServer } from '../github-mock-api.js';
 
@@ -57,6 +57,8 @@ beforeAll(async () => {
   process.env.GITHUB_TOKEN = 'test-github-token';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
+  process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
+  process.env.TRACKER_API_KEY = 'test-api-key';
   delete process.env.EMAIL_SERVICE;
 
   mailpitApiUrl = `http://${mailpitContainer.getHost()}:${mailpitContainer.getMappedPort(8025)}`;
@@ -70,7 +72,7 @@ beforeAll(async () => {
   mockGithubServer.listen({ onUnhandledRequest: 'bypass' });
 
   // Import app and dependencies
-  const dbClient = await import('../../src/db/client.js');
+  const dbClient = await import('../../src/shared/db/client.js');
   drizzleClient = dbClient.drizzleClient;
 
   const deps = await import('../../src/dependencies-container.js');

@@ -1,26 +1,27 @@
-import type { RepoRepository } from '../../repositories/repo-repository.interface.js';
+import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
-} from '../../repositories/subscription/subscription.repository.interface.js';
-import type { CacheService } from '../../services/cache/cache.service.interface.js';
-import type { EmailQueueClient } from '../../services/email-queue/email-queue.service.interface.ts';
-import type { NotificationTokensService } from '../../services/notification-tokens-service/notification-tokens.service.interface.js';
-import { NotificationTokenTypesEnum } from '../../services/notification-tokens-service/token-types.enum.js';
-import type { RepositoryScanner } from '../../services/scanner/repository-scanner.service.interface.js';
+} from './repository/subscription.repository.interface.js';
+import type { Subscription } from './repository/subscription.types.js';
+import type { CacheService } from '../../shared/cache/cache.service.interface.js';
+import type { NotificationFacade } from '../notification/notification.facade.js';
+import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
+import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
+import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import {
   AppError,
   AppErrorTypesEnum,
-} from '../../utils/error-handling/errors/app.error.js';
+} from '../../shared/utils/error-handling/errors/app.error.js';
 import type { SubscriptionService } from './subscription.service.interface.js';
 
 export class SubscriptionServiceImplementation implements SubscriptionService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly githubRepoRepository: RepoRepository,
-    private readonly repoScanner: RepositoryScanner,
+    private readonly tracker: TrackerFacade,
     private readonly tokensService: NotificationTokensService,
-    private readonly emailQueue: EmailQueueClient,
+    private readonly notification: NotificationFacade,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -37,7 +38,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     let repo = await this.githubRepoRepository.findByName(repoFullName);
 
     if (!repo) {
-      await this.repoScanner.verifyRepository(owner, repositoryName);
+      await this.tracker.verifyRepository(owner, repositoryName);
       repo = await this.githubRepoRepository.createOne({ name: repoFullName });
     } else {
       const existingSubscription =
@@ -60,10 +61,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
       subscription.id,
     );
 
-    await this.emailQueue.queueConfirmationEmail({
-      email,
-      token: confirmToken,
-    });
+    await this.notification.queueConfirmationEmail(email, confirmToken);
   }
 
   public async confirmSubscription(token: string): Promise<void> {
@@ -120,5 +118,11 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     email: string,
   ): Promise<SubscriptionWithRepository[]> {
     return await this.subscriptionRepository.findByEmailWithRepo(email);
+  }
+
+  public async getConfirmedSubscribersByRepo(
+    repoId: string,
+  ): Promise<Subscription[]> {
+    return await this.subscriptionRepository.findConfirmedByRepoId(repoId);
   }
 }

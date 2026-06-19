@@ -15,7 +15,10 @@ export class RepoEventPublisher {
   constructor(private readonly rabbitmqUrl: string) {}
 
   public async connect(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl, REPOSITORIES_EXCHANGE);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      REPOSITORIES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
   }

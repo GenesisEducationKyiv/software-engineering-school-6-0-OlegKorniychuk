@@ -10,7 +10,10 @@ import type { NotificationTokensService } from './tokens/notification-tokens.ser
 import type { SubscribeSagaRepository } from './saga/subscribe-saga.repository.interface.js';
 import type { RepoCommandPublisher } from './saga/repo-command.publisher.js';
 import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
-import type { SubscribeResult, SubscriptionService } from './subscription.service.interface.js';
+import type {
+  SubscribeResult,
+  SubscriptionService,
+} from './subscription.service.interface.js';
 import {
   AppError,
   AppErrorTypesEnum,
@@ -37,11 +40,15 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     repositoryName: string,
   ): Promise<SubscribeResult> {
     const repoFullName = `${owner}/${repositoryName}`;
-    const localRepo = await this.subscriptionRepoRepository.findByName(repoFullName);
+    const localRepo =
+      await this.subscriptionRepoRepository.findByName(repoFullName);
 
     if (localRepo) {
       const existingSubscription =
-        await this.subscriptionRepository.findOneByRepoAndEmail(email, localRepo.id);
+        await this.subscriptionRepository.findOneByRepoAndEmail(
+          email,
+          localRepo.id,
+        );
 
       if (existingSubscription)
         throw new AppError(
@@ -55,13 +62,18 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
         githubRepositoryId: localRepo.id,
       });
 
-      const confirmToken = this.tokensService.generateConfirmToken(subscription.id);
+      const confirmToken = this.tokensService.generateConfirmToken(
+        subscription.id,
+      );
       await this.notification.queueConfirmationEmail(email, confirmToken);
 
       return { status: 'created' };
     }
 
-    const saga = await this.sagaRepository.create({ email, repoName: repoFullName });
+    const saga = await this.sagaRepository.create({
+      email,
+      repoName: repoFullName,
+    });
     await this.repoCommandPublisher.publishCreateRequested({
       sagaId: saga.id,
       owner,

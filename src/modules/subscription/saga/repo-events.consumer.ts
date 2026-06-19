@@ -31,13 +31,24 @@ export class RepoEventsConsumer {
   ) {}
 
   public async start(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl, REPOSITORIES_EXCHANGE);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      REPOSITORIES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
 
     await this.channel.assertQueue(REPO_EVENTS_QUEUE, { durable: true });
-    await this.channel.bindQueue(REPO_EVENTS_QUEUE, REPOSITORIES_EXCHANGE, REPO_CREATED_KEY);
-    await this.channel.bindQueue(REPO_EVENTS_QUEUE, REPOSITORIES_EXCHANGE, REPO_CREATE_FAILED_KEY);
+    await this.channel.bindQueue(
+      REPO_EVENTS_QUEUE,
+      REPOSITORIES_EXCHANGE,
+      REPO_CREATED_KEY,
+    );
+    await this.channel.bindQueue(
+      REPO_EVENTS_QUEUE,
+      REPOSITORIES_EXCHANGE,
+      REPO_CREATE_FAILED_KEY,
+    );
     this.channel.prefetch(1);
 
     const { consumerTag } = await this.channel.consume(
@@ -48,7 +59,10 @@ export class RepoEventsConsumer {
           await this.handleMessage(msg);
           this.channel!.ack(msg);
         } catch (err) {
-          this.logger.error({ err }, '[RepoEventsConsumer]: Failed to process message');
+          this.logger.error(
+            { err },
+            '[RepoEventsConsumer]: Failed to process message',
+          );
           this.channel!.nack(msg, false, false);
         }
       },
@@ -69,7 +83,9 @@ export class RepoEventsConsumer {
     const routingKey = msg.fields.routingKey;
 
     if (routingKey === REPO_CREATED_KEY) {
-      await this.handleRepoCreated(JSON.parse(msg.content.toString()) as RepoCreatedEvent);
+      await this.handleRepoCreated(
+        JSON.parse(msg.content.toString()) as RepoCreatedEvent,
+      );
     } else if (routingKey === REPO_CREATE_FAILED_KEY) {
       await this.handleRepoCreateFailed(
         JSON.parse(msg.content.toString()) as RepoCreateFailedEvent,
@@ -80,9 +96,13 @@ export class RepoEventsConsumer {
   private async handleRepoCreated(event: RepoCreatedEvent): Promise<void> {
     const { sagaId, repoId, repoName } = event;
 
-    await this.subscriptionRepoRepository.createOne({ id: repoId, name: repoName });
+    await this.subscriptionRepoRepository.createOne({
+      id: repoId,
+      name: repoName,
+    });
 
-    const pendingSagas = await this.sagaRepository.findAwaitingByRepoName(repoName);
+    const pendingSagas =
+      await this.sagaRepository.findAwaitingByRepoName(repoName);
 
     for (const saga of pendingSagas) {
       const existing = await this.subscriptionRepository.findOneByRepoAndEmail(
@@ -115,9 +135,14 @@ export class RepoEventsConsumer {
     }
   }
 
-  private async handleRepoCreateFailed(event: RepoCreateFailedEvent): Promise<void> {
+  private async handleRepoCreateFailed(
+    event: RepoCreateFailedEvent,
+  ): Promise<void> {
     const { sagaId, reason, message } = event;
     await this.sagaRepository.markFailed(sagaId, `${reason}: ${message}`);
-    this.logger.warn({ sagaId, reason }, '[RepoEventsConsumer]: Repo creation failed');
+    this.logger.warn(
+      { sagaId, reason },
+      '[RepoEventsConsumer]: Repo creation failed',
+    );
   }
 }

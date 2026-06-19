@@ -1,6 +1,9 @@
 import type { DrizzleClient } from '../../../shared/db/client.js';
 import { subscriptionRepositories } from '../../../shared/db/schema/subscription-repositories.js';
-import type { CreateSubscriptionRepo, SubscriptionRepo } from './subscription-repo.types.js';
+import type {
+  CreateSubscriptionRepo,
+  SubscriptionRepo,
+} from './subscription-repo.types.js';
 import type { SubscriptionRepoRepository } from './subscription-repo.repository.interface.js';
 
 export class SubscriptionRepoRepositoryImplementation implements SubscriptionRepoRepository {
@@ -20,7 +23,9 @@ export class SubscriptionRepoRepositoryImplementation implements SubscriptionRep
     return result ?? null;
   }
 
-  public async createOne(data: CreateSubscriptionRepo): Promise<SubscriptionRepo> {
+  public async createOne(
+    data: CreateSubscriptionRepo,
+  ): Promise<SubscriptionRepo> {
     const [result] = await this.db
       .insert(subscriptionRepositories)
       .values(data)

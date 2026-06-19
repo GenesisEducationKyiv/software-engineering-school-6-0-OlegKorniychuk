@@ -30,14 +30,21 @@ import { NotificationTokensServiceImplementation } from './modules/subscription/
 export const metricsCollector = new MetricsCollector();
 
 // Repositories
-const subscriptionRepository = new SubscriptionRepositoryImplementation(drizzleClient);
-const subscriptionRepoRepository = new SubscriptionRepoRepositoryImplementation(drizzleClient);
+const subscriptionRepository = new SubscriptionRepositoryImplementation(
+  drizzleClient,
+);
+const subscriptionRepoRepository = new SubscriptionRepoRepositoryImplementation(
+  drizzleClient,
+);
 
 // Tokens + cache
 export const tokensService = new NotificationTokensServiceImplementation(
   env.NOTIFICATION_TOKEN_SECRET,
 );
-export const cacheService = new CacheServiceImplementation(redisConnection, logger);
+export const cacheService = new CacheServiceImplementation(
+  redisConnection,
+  logger,
+);
 
 // Notification
 const mailClient = new NodemailerClient({
@@ -51,8 +58,13 @@ const mailClient = new NodemailerClient({
 });
 const notifier = new EmailNotifierStrategy(mailClient, 'http://localhost:3000');
 const emailQueue = new EmailQueueClientImplementation(redisConnection);
-const notificationDispatcher = new NotificationDispatcherImplementation(emailQueue);
-const notificationFacade = new NotificationFacade(emailQueue, notificationDispatcher);
+const notificationDispatcher = new NotificationDispatcherImplementation(
+  emailQueue,
+);
+const notificationFacade = new NotificationFacade(
+  emailQueue,
+  notificationDispatcher,
+);
 
 // Saga
 const sagaRepository = new SubscribeSagaRepositoryImplementation(drizzleClient);
@@ -69,7 +81,10 @@ export const subscriptionService = new SubscriptionServiceImplementation(
   cacheService,
 );
 
-const subscriptionFacade = new SubscriptionFacade(subscriptionService, tokensService);
+const subscriptionFacade = new SubscriptionFacade(
+  subscriptionService,
+  tokensService,
+);
 
 export const subscriptionController = new SubscriptionController(
   subscriptionService,
@@ -77,7 +92,11 @@ export const subscriptionController = new SubscriptionController(
 );
 
 // Workers
-export const emailWorker = new EmailWorker(redisConnection, logger, metricsCollector);
+export const emailWorker = new EmailWorker(
+  redisConnection,
+  logger,
+  metricsCollector,
+);
 
 emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
   const data = job.data as SendConfirmationEmailPayload;
@@ -86,7 +105,12 @@ emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
 
 emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
   const data = job.data as SendNotificationEmailPayload;
-  await notifier.sendNotification([data.email], data.repo, data.release, data.token);
+  await notifier.sendNotification(
+    [data.email],
+    data.repo,
+    data.release,
+    data.token,
+  );
 });
 
 export const releaseDetectedWorker = new ReleaseDetectedWorker(

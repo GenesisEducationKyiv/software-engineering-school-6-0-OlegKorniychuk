@@ -13,12 +13,17 @@ export class RepoCommandPublisher {
   constructor(private readonly rabbitmqUrl: string) {}
 
   public async connect(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl, REPOSITORIES_EXCHANGE);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      REPOSITORIES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
   }
 
-  public async publishCreateRequested(command: RepoCreateRequestedCommand): Promise<void> {
+  public async publishCreateRequested(
+    command: RepoCreateRequestedCommand,
+  ): Promise<void> {
     if (!this.channel) throw new Error('[RepoCommandPublisher]: Not connected');
     this.channel.publish(
       REPOSITORIES_EXCHANGE,

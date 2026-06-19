@@ -106,10 +106,16 @@ describe('SubscriptionService', () => {
       } as Subscription);
       mockTokensService.generateConfirmToken.mockReturnValueOnce(mockToken);
 
-      const result = await service.subscribe(mockEmail, mockOwner, mockRepoName);
+      const result = await service.subscribe(
+        mockEmail,
+        mockOwner,
+        mockRepoName,
+      );
 
       expect(result).toEqual({ status: 'created' });
-      expect(mockSubscriptionRepoRepo.findByName).toHaveBeenCalledWith(mockRepoFullName);
+      expect(mockSubscriptionRepoRepo.findByName).toHaveBeenCalledWith(
+        mockRepoFullName,
+      );
       expect(mockSubscriptionRepo.createOne).toHaveBeenCalledWith({
         email: mockEmail,
         githubRepositoryId: mockRepoId,
@@ -132,14 +138,20 @@ describe('SubscriptionService', () => {
         createdAt: new Date(),
       } as SubscribeSaga);
 
-      const result = await service.subscribe(mockEmail, mockOwner, mockRepoName);
+      const result = await service.subscribe(
+        mockEmail,
+        mockOwner,
+        mockRepoName,
+      );
 
       expect(result).toEqual({ status: 'pending', sagaId: mockSagaId });
       expect(mockSagaRepository.create).toHaveBeenCalledWith({
         email: mockEmail,
         repoName: mockRepoFullName,
       });
-      expect(mockRepoCommandPublisher.publishCreateRequested).toHaveBeenCalledWith({
+      expect(
+        mockRepoCommandPublisher.publishCreateRequested,
+      ).toHaveBeenCalledWith({
         sagaId: mockSagaId,
         owner: mockOwner,
         repoName: mockRepoName,

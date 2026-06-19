@@ -6,7 +6,6 @@ import {
   type ReleaseDetectedEvent,
 } from '../../shared/messaging/release-detected.event.js';
 
-
 export class ReleasePublisher {
   private connection: amqplib.ChannelModel | null = null;
   private channel: amqplib.Channel | null = null;
@@ -14,7 +13,10 @@ export class ReleasePublisher {
   constructor(private readonly rabbitmqUrl: string) {}
 
   public async connect(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl, RELEASES_EXCHANGE);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      RELEASES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
   }

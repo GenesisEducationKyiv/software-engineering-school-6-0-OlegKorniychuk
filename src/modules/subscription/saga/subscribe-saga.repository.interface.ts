@@ -1,4 +1,7 @@
-import type { CreateSubscribeSaga, SubscribeSaga } from './subscribe-saga.types.js';
+import type {
+  CreateSubscribeSaga,
+  SubscribeSaga,
+} from './subscribe-saga.types.js';
 
 export interface SubscribeSagaRepository {
   create(data: CreateSubscribeSaga): Promise<SubscribeSaga>;

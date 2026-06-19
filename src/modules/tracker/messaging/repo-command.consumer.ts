@@ -29,11 +29,16 @@ export class RepoCommandConsumer {
   ) {}
 
   public async start(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl, REPOSITORIES_EXCHANGE);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      REPOSITORIES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
 
-    await this.channel.assertQueue(REPO_CREATE_REQUESTED_QUEUE, { durable: true });
+    await this.channel.assertQueue(REPO_CREATE_REQUESTED_QUEUE, {
+      durable: true,
+    });
     await this.channel.bindQueue(
       REPO_CREATE_REQUESTED_QUEUE,
       REPOSITORIES_EXCHANGE,
@@ -49,14 +54,19 @@ export class RepoCommandConsumer {
           await this.handleMessage(msg);
           this.channel!.ack(msg);
         } catch (err) {
-          this.logger.error({ err }, '[RepoCommandConsumer]: Failed to process message');
+          this.logger.error(
+            { err },
+            '[RepoCommandConsumer]: Failed to process message',
+          );
           this.channel!.nack(msg, false, false);
         }
       },
     );
 
     this.consumerTag = consumerTag;
-    this.logger.info('[RepoCommandConsumer]: Listening for repo.create.requested');
+    this.logger.info(
+      '[RepoCommandConsumer]: Listening for repo.create.requested',
+    );
   }
 
   public async close(): Promise<void> {
@@ -67,7 +77,9 @@ export class RepoCommandConsumer {
   }
 
   private async handleMessage(msg: amqplib.ConsumeMessage): Promise<void> {
-    const command = JSON.parse(msg.content.toString()) as RepoCreateRequestedCommand;
+    const command = JSON.parse(
+      msg.content.toString(),
+    ) as RepoCreateRequestedCommand;
     const { sagaId, owner, repoName } = command;
     const repoFullName = `${owner}/${repoName}`;
 

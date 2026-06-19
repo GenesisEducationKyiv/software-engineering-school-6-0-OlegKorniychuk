@@ -1,4 +1,7 @@
-import type { CreateSubscriptionRepo, SubscriptionRepo } from './subscription-repo.types.js';
+import type {
+  CreateSubscriptionRepo,
+  SubscriptionRepo,
+} from './subscription-repo.types.js';
 
 export interface SubscriptionRepoRepository {
   findByName(name: string): Promise<SubscriptionRepo | null>;

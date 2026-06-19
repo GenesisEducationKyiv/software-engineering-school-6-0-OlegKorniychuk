@@ -1,7 +1,10 @@
 import { and, eq } from 'drizzle-orm';
 import type { DrizzleClient } from '../../../shared/db/client.js';
 import { subscribeSagas } from '../../../shared/db/schema/subscribe-sagas.js';
-import type { CreateSubscribeSaga, SubscribeSaga } from './subscribe-saga.types.js';
+import type {
+  CreateSubscribeSaga,
+  SubscribeSaga,
+} from './subscribe-saga.types.js';
 import type { SubscribeSagaRepository } from './subscribe-saga.repository.interface.js';
 
 export class SubscribeSagaRepositoryImplementation implements SubscribeSagaRepository {
@@ -22,7 +25,9 @@ export class SubscribeSagaRepositoryImplementation implements SubscribeSagaRepos
     return result ?? null;
   }
 
-  public async findAwaitingByRepoName(repoName: string): Promise<SubscribeSaga[]> {
+  public async findAwaitingByRepoName(
+    repoName: string,
+  ): Promise<SubscribeSaga[]> {
     return this.db
       .select()
       .from(subscribeSagas)

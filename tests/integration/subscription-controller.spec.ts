@@ -11,16 +11,14 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
-import { githubRepositories } from '../../src/shared/db/schema/repositories.js';
+import { subscriptionRepositories } from '../../src/shared/db/schema/subscription-repositories.js';
 import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { Express } from 'express';
 import type { NotificationTokensService } from '../../src/modules/subscription/tokens/notification-tokens.service.interface.js';
 import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
-import { mockGithubServer } from '../github-mock-api.js';
 
-afterEach(() => mockGithubServer.resetHandlers());
-afterAll(() => mockGithubServer.close());
+afterEach(() => jest.clearAllMocks());
 
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
@@ -35,7 +33,6 @@ let tokensService: NotificationTokensService;
 beforeAll(async () => {
   jest.setTimeout(120000);
 
-  // Start containers
   pgContainer = await new PostgreSqlContainer('postgres:13-alpine')
     .withDatabase('test')
     .withUsername('test')
@@ -50,7 +47,6 @@ beforeAll(async () => {
     .withExposedPorts(1025, 8025)
     .start();
 
-  // Set environment variables
   const dbUrl = pgContainer.getConnectionUri();
   process.env.DATABASE_URL = dbUrl;
   process.env.REDIS_URL = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`;
@@ -62,21 +58,15 @@ beforeAll(async () => {
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
   process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
-  process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
-  process.env.TRACKER_API_KEY = 'test-api-key';
   delete process.env.EMAIL_SERVICE;
 
   mailpitApiUrl = `http://${mailpitContainer.getHost()}:${mailpitContainer.getMappedPort(8025)}`;
 
-  // Run migrations
   const migrationPool = new pg.Pool({ connectionString: dbUrl });
   const migrationDb = drizzle({ client: migrationPool });
   await migrate(migrationDb, { migrationsFolder: './drizzle' });
   await migrationPool.end();
 
-  mockGithubServer.listen({ onUnhandledRequest: 'bypass' });
-
-  // Import app and dependencies
   const dbClient = await import('../../src/shared/db/client.js');
   drizzleClient = dbClient.drizzleClient;
 
@@ -117,7 +107,7 @@ afterAll(async () => {
 beforeEach(async () => {
   if (drizzleClient) {
     await drizzleClient.execute(
-      sql`TRUNCATE TABLE subscriptions, github_repositories RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE TABLE subscriptions, subscription_repositories, subscribe_sagas RESTART IDENTITY CASCADE`,
     );
   }
   await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
@@ -127,7 +117,7 @@ describe('SubscriptionController Integration Tests', () => {
   const apiKey = 'test-api-key';
 
   describe('POST /subscribe', () => {
-    it('should successfully subscribe to a repository', async () => {
+    it('should return 202 and start saga when repo not in local copy', async () => {
       const email = 'user@example.com';
       const repo = 'owner/repo';
 
@@ -136,16 +126,37 @@ describe('SubscriptionController Integration Tests', () => {
         .set('x-api-key', apiKey)
         .send({ email, repo });
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(202);
+      expect(response.body.message).toBe('Subscription pending repository setup.');
+      expect(response.body.sagaId).toBeDefined();
+
+      const sagas = await drizzleClient.query.subscribeSagas.findMany();
+      expect(sagas.length).toBe(1);
+      expect(sagas[0]!.status).toBe('awaiting_repo');
+    });
+
+    it('should return 201 and send email when repo already in local copy', async () => {
+      const email = 'user@example.com';
+      const repoName = 'owner/repo';
+
+      const [localRepo] = await drizzleClient
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: repoName })
+        .returning();
+      if (!localRepo) throw new Error('Failed to insert test repo');
+
+      const response = await request(app)
+        .post('/subscribe')
+        .set('x-api-key', apiKey)
+        .send({ email, repo: repoName });
+
+      expect(response.status).toBe(201);
       expect(response.body.message).toBe(
         'Subscription successful. Confirmation email sent.',
       );
 
       const subs = await drizzleClient.query.subscriptions.findMany();
       expect(subs.length).toBe(1);
-
-      const repos = await drizzleClient.query.githubRepositories.findMany();
-      expect(repos.length).toBe(1);
 
       let mailData: MailpitMessagesResponse = { total: 0, messages: [] };
       for (let i = 0; i < 20; i++) {
@@ -159,18 +170,6 @@ describe('SubscriptionController Integration Tests', () => {
         'Confirm your GitHub Release Subscription',
       );
     }, 30000);
-
-    it('should return 404 if repository does not exist on GitHub', async () => {
-      const email = 'user@example.com';
-      const repo = 'nonexistent/repo';
-
-      const response = await request(app)
-        .post('/subscribe')
-        .set('x-api-key', apiKey)
-        .send({ email, repo });
-
-      expect(response.status).toBe(404);
-    });
 
     it('should return 401 if API key is missing', async () => {
       const response = await request(app)
@@ -188,26 +187,48 @@ describe('SubscriptionController Integration Tests', () => {
 
       expect(response.status).toBe(400);
     });
+
+    it('should return 409 if user is already subscribed (repo known locally)', async () => {
+      const email = 'user@example.com';
+      const repoName = 'owner/repo';
+
+      const [localRepo] = await drizzleClient
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: repoName })
+        .returning();
+      if (!localRepo) throw new Error('Failed to insert test repo');
+
+      await drizzleClient.insert(subscriptions).values({
+        email,
+        githubRepositoryId: localRepo.id,
+        confirmed: false,
+      });
+
+      const response = await request(app)
+        .post('/subscribe')
+        .set('x-api-key', apiKey)
+        .send({ email, repo: repoName });
+
+      expect(response.status).toBe(409);
+    });
   });
 
   describe('GET /confirm/:token', () => {
     it('should confirm a subscription', async () => {
-      const [repo] = await drizzleClient
-        .insert(githubRepositories)
-        .values({ name: 'owner/repo' })
+      const [localRepo] = await drizzleClient
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
         .returning();
-
-      if (!repo) throw new Error('Failed to insert test data');
+      if (!localRepo) throw new Error('Failed to insert test data');
 
       const [sub] = await drizzleClient
         .insert(subscriptions)
         .values({
           email: 'user@example.com',
-          githubRepositoryId: repo.id,
+          githubRepositoryId: localRepo.id,
           confirmed: false,
         })
         .returning();
-
       if (!sub) throw new Error('Failed to insert test data');
 
       const token = tokensService.generateConfirmToken(sub.id);
@@ -215,14 +236,10 @@ describe('SubscriptionController Integration Tests', () => {
       const response = await request(app).get(`/confirm/${token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe(
-        'Subscription confirmed successfully.',
-      );
+      expect(response.body.message).toBe('Subscription confirmed successfully.');
 
       const updatedSub = await drizzleClient.query.subscriptions.findFirst({
-        where: {
-          id: sub.id,
-        },
+        where: { id: sub.id },
       });
       expect(updatedSub?.confirmed).toBe(true);
     });
@@ -235,22 +252,20 @@ describe('SubscriptionController Integration Tests', () => {
 
   describe('GET /unsubscribe/:token', () => {
     it('should unsubscribe successfully', async () => {
-      const [repo] = await drizzleClient
-        .insert(githubRepositories)
-        .values({ name: 'owner/repo' })
+      const [localRepo] = await drizzleClient
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
         .returning();
-
-      if (!repo) throw new Error('Failed to insert test data');
+      if (!localRepo) throw new Error('Failed to insert test data');
 
       const [sub] = await drizzleClient
         .insert(subscriptions)
         .values({
           email: 'user@example.com',
-          githubRepositoryId: repo.id,
+          githubRepositoryId: localRepo.id,
           confirmed: true,
         })
         .returning();
-
       if (!sub) throw new Error('Failed to insert test data');
 
       const token = tokensService.generateUnsubscribeToken(sub.id);
@@ -274,14 +289,13 @@ describe('SubscriptionController Integration Tests', () => {
     it('should list all subscriptions for an email', async () => {
       const email = 'user@example.com';
       const [repo1] = await drizzleClient
-        .insert(githubRepositories)
-        .values({ name: 'owner/repo1' })
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo1' })
         .returning();
       const [repo2] = await drizzleClient
-        .insert(githubRepositories)
-        .values({ name: 'owner/repo2' })
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000002', name: 'owner/repo2' })
         .returning();
-
       if (!repo1 || !repo2) throw new Error('Failed to insert test data');
 
       await drizzleClient.insert(subscriptions).values([
@@ -306,20 +320,18 @@ describe('SubscriptionController Integration Tests', () => {
 
     it('should return data from cache on second request', async () => {
       const email = 'cached@example.com';
-      const [repo] = await drizzleClient
-        .insert(githubRepositories)
-        .values({ name: 'owner/cached-repo' })
+      const [localRepo] = await drizzleClient
+        .insert(subscriptionRepositories)
+        .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/cached-repo' })
         .returning();
-
-      if (!repo) throw new Error('Failed to insert test data');
+      if (!localRepo) throw new Error('Failed to insert test data');
 
       await drizzleClient.insert(subscriptions).values({
         email,
-        githubRepositoryId: repo.id,
+        githubRepositoryId: localRepo.id,
         confirmed: true,
       });
 
-      // First request (Cache Miss)
       const response1 = await request(app)
         .get('/subscriptions')
         .query({ email })
@@ -327,19 +339,17 @@ describe('SubscriptionController Integration Tests', () => {
       expect(response1.status).toBe(200);
       expect(response1.body[0].repo).toBe('owner/cached-repo');
 
-      // Update DB directly (bypassing app cache invalidation)
       await drizzleClient
-        .update(githubRepositories)
+        .update(subscriptionRepositories)
         .set({ name: 'owner/updated-repo' })
-        .where(sql`id = ${repo.id}`);
+        .where(sql`id = ${localRepo.id}`);
 
-      // Second request (Cache Hit - should still return old data)
       const response2 = await request(app)
         .get('/subscriptions')
         .query({ email })
         .set('x-api-key', apiKey);
       expect(response2.status).toBe(200);
-      expect(response2.body[0].repo).toBe('owner/cached-repo'); // Old data from cache
+      expect(response2.body[0].repo).toBe('owner/cached-repo');
     });
   });
 });

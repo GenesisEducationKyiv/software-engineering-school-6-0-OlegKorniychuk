@@ -12,6 +12,8 @@ import { ReleaseCheckerServiceImplementation } from './modules/tracker/scanner/r
 import { ReleasePublisher } from './modules/tracker/release-publisher.js';
 import { ScanRunner } from './modules/tracker/cron/scan-runner.js';
 import { ScannerCron } from './modules/tracker/cron/scanner-cron.js';
+import { RepoEventPublisher } from './modules/tracker/messaging/repo-event.publisher.js';
+import { RepoCommandConsumer } from './modules/tracker/messaging/repo-command.consumer.js';
 
 export const trackerMetrics = new MetricsCollector();
 
@@ -48,13 +50,28 @@ export const scannerCron = new ScannerCron(
   trackerMetrics,
 );
 
-export const initTrackerRabbitMQ = () => releasePublisher.connect();
+const repoEventPublisher = new RepoEventPublisher(trackerEnv.RABBITMQ_URL);
+
+export const repoCommandConsumer = new RepoCommandConsumer(
+  trackerEnv.RABBITMQ_URL,
+  githubRepoRepository,
+  repoScanner,
+  repoEventPublisher,
+  logger,
+);
+
+export const initTrackerRabbitMQ = async () => {
+  await releasePublisher.connect();
+  await repoEventPublisher.connect();
+};
 
 export const shutdownTrackerDependencies = async () => {
   logger.info('[Tracker]: Closing workers and queues...');
   await scannerCron.worker.close();
   await scannerCron.queue.close();
   await releasePublisher.close();
+  await repoEventPublisher.close();
+  await repoCommandConsumer.close();
   await trackerRedis.quit();
   await pool.end();
 };

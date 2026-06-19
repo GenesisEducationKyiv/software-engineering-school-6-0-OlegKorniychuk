@@ -5,6 +5,7 @@ import { logger } from './shared/utils/logger.js';
 import {
   repoScanner,
   scannerCron,
+  repoCommandConsumer,
   shutdownTrackerDependencies,
   initTrackerRabbitMQ,
 } from './tracker-dependencies.js';
@@ -20,6 +21,7 @@ const server = app.listen(trackerEnv.TRACKER_PORT, async () => {
   );
 
   await initTrackerRabbitMQ();
+  await repoCommandConsumer.start();
 
   if (process.env.NODE_ENV !== 'test') {
     await scannerCron.startSchedule();

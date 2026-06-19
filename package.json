@@ -36,6 +36,7 @@
     "@playwright/test": "^1.60.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@testcontainers/redis": "^11.14.0",
+    "@types/amqplib": "^0.10.8",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/ioredis": "^4.28.10",
@@ -68,6 +69,7 @@
   },
   "dependencies": {
     "@elastic/ecs-pino-format": "^1.5.0",
+    "amqplib": "^2.0.1",
     "bullmq": "^5.73.4",
     "dotenv": "^17.4.1",
     "drizzle-orm": "^1.0.0-beta.20",

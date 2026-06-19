@@ -3,9 +3,12 @@ import { createApp, createMetricsApp } from './app.js';
 import {
   metricsCollector,
   shutdownDependencies,
+  initNotificationRabbitMQ,
 } from './dependencies-container.js';
 import { env } from './shared/config/envs.js';
 import { logger } from './shared/utils/logger.js';
+
+await initNotificationRabbitMQ();
 
 const app = createApp(metricsCollector);
 const metricsApp = createMetricsApp();

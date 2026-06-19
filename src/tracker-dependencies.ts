@@ -33,7 +33,7 @@ const releaseChecker = new ReleaseCheckerServiceImplementation(
   githubRepoRepository,
   repoScanner,
 );
-const releasePublisher = new ReleasePublisher(trackerRedis);
+const releasePublisher = new ReleasePublisher(trackerEnv.RABBITMQ_URL);
 const scanRunner = new ScanRunner(
   githubRepoRepository,
   releaseChecker,
@@ -47,6 +47,8 @@ export const scannerCron = new ScannerCron(
   logger,
   trackerMetrics,
 );
+
+export const initTrackerRabbitMQ = () => releasePublisher.connect();
 
 export const shutdownTrackerDependencies = async () => {
   logger.info('[Tracker]: Closing workers and queues...');

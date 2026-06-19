@@ -24,6 +24,7 @@ afterAll(() => mockGithubServer.close());
 
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
+let rabbitmqContainer: StartedTestContainer;
 let mailpitContainer: StartedTestContainer;
 let app: Express;
 let drizzleClient: DrizzleClient;
@@ -42,6 +43,9 @@ beforeAll(async () => {
     .start();
 
   redisContainer = await new RedisContainer('redis:7-alpine').start();
+  rabbitmqContainer = await new GenericContainer('rabbitmq:3-alpine')
+    .withExposedPorts(5672)
+    .start();
   mailpitContainer = await new GenericContainer('axllent/mailpit')
     .withExposedPorts(1025, 8025)
     .start();
@@ -57,6 +61,7 @@ beforeAll(async () => {
   process.env.GITHUB_TOKEN = 'test-github-token';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
+  process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
   process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
   process.env.TRACKER_API_KEY = 'test-api-key';
   delete process.env.EMAIL_SERVICE;
@@ -83,6 +88,8 @@ beforeAll(async () => {
     .run()
     .catch((err) => console.error('Worker run error:', err));
 
+  await deps.initNotificationRabbitMQ();
+
   const { createApp } = await import('../../src/app.js');
   app = createApp(deps.metricsCollector);
 
@@ -90,6 +97,7 @@ beforeAll(async () => {
     if (shutdownDependencies) await shutdownDependencies();
     if (pgContainer) await pgContainer.stop();
     if (redisContainer) await redisContainer.stop();
+    if (rabbitmqContainer) await rabbitmqContainer.stop();
     if (mailpitContainer) await mailpitContainer.stop();
   };
 
@@ -101,6 +109,7 @@ afterAll(async () => {
   if (shutdownDependencies) await shutdownDependencies();
   if (pgContainer) await pgContainer.stop();
   if (redisContainer) await redisContainer.stop();
+  if (rabbitmqContainer) await rabbitmqContainer.stop();
   if (mailpitContainer) await mailpitContainer.stop();
   jest.restoreAllMocks();
 });

@@ -11,6 +11,7 @@ services:
       - PORT=3000
       - DATABASE_URL=postgres://postgres:password@db:5432/releases_db
       - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - API_KEY=secret-api-key
       - NOTIFICATION_TOKEN_SECRET=test-notification-secret
       - LOG_FILE=/var/log/github-release-notifier/app.log
@@ -28,6 +29,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
       tracker:
         condition: service_started
     restart: no
@@ -44,6 +47,7 @@ services:
       - TRACKER_PORT=3001
       - DATABASE_URL=postgres://postgres:password@db:5432/releases_db
       - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - API_KEY=secret-api-key
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     depends_on:
@@ -51,6 +55,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: no
 
   db:
@@ -76,6 +82,19 @@ services:
     container_name: releases_redis
     ports:
       - '6379:6379'
+    restart: no
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: releases_rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: no
 
   filebeat:

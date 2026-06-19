@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
+import { subscriptionRepositories } from '../../src/shared/db/schema/subscription-repositories.js';
+import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 
 let drizzleClient: DrizzleClient;
 let mailpitApiUrl: string;
@@ -50,7 +52,7 @@ test.afterAll(async () => {
 
 test.beforeEach(async () => {
   await drizzleClient.execute(
-    sql`TRUNCATE TABLE subscriptions, github_repositories RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE subscriptions, subscription_repositories, subscribe_sagas RESTART IDENTITY CASCADE`,
   );
   await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
 });
@@ -58,17 +60,18 @@ test.beforeEach(async () => {
 test('should successfully subscribe, confirm, and list subscriptions', async ({
   page,
 }) => {
+  // Pre-seed local repo copy so subscribe uses the sync path (201 + email)
+  await drizzleClient
+    .insert(subscriptionRepositories)
+    .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' });
+
   await page.goto('/');
 
-  // Enter API Key
   await page.fill('#apiKey', 'secret-api-key');
-
-  // Subscribe
   await page.fill('#subEmail', 'test-e2e@example.com');
   await page.fill('#subRepo', 'owner/repo');
   await page.click('button:has-text("Subscribe to Releases")');
 
-  // Assert success message
   await expect(page.locator('#message')).toHaveText(
     'Successfully subscribed! Please check your email to confirm.',
     { timeout: 15000 },
@@ -86,20 +89,18 @@ test('should successfully subscribe, confirm, and list subscriptions', async ({
   expect(mailData.total).toBe(1);
   const emailId = mailData.messages[0]!.ID;
 
-  // Fetch email body to get confirmation link
   const emailSourceResponse = await fetch(
     `${mailpitApiUrl}/api/v1/message/${emailId}`,
   );
   const emailSource = (await emailSourceResponse.json()) as { HTML: string };
   const htmlBody = emailSource.HTML;
 
-  // Extract link
   const match = htmlBody.match(/href="([^"]+)"/);
   expect(match).toBeTruthy();
   const confirmLink = match![1];
   expect(confirmLink).toBeDefined();
 
-  // Navigate to confirmation link. Need to replace 3000 with 3002.
+  // Replace port 3000 with test server port 3002
   const localConfirmLink = confirmLink!.replace('3000', '3002');
 
   const confirmRes = await page.request.get(localConfirmLink);
@@ -113,18 +114,28 @@ test('should successfully subscribe, confirm, and list subscriptions', async ({
   await page.fill('#viewEmail', 'test-e2e@example.com');
   await page.click('button:has-text("View Subscriptions")');
 
-  // Assert subscription is in the list
   await expect(page.locator('#subscriptionsList')).toContainText('owner/repo');
-  await expect(page.locator('#subscriptionsList')).toContainText(
-    '✅ Confirmed',
-  );
+  await expect(page.locator('#subscriptionsList')).toContainText('✅ Confirmed');
 });
 
-test('should show error for non-existent repo', async ({ page }) => {
+test('should show error when already subscribed to a repo', async ({ page }) => {
+  // Pre-seed repo + existing subscription
+  const [localRepo] = await drizzleClient
+    .insert(subscriptionRepositories)
+    .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
+    .returning();
+  if (!localRepo) throw new Error('Failed to insert test repo');
+
+  await drizzleClient.insert(subscriptions).values({
+    email: 'test-e2e@example.com',
+    githubRepositoryId: localRepo.id,
+    confirmed: true,
+  });
+
   await page.goto('/');
   await page.fill('#apiKey', 'secret-api-key');
   await page.fill('#subEmail', 'test-e2e@example.com');
-  await page.fill('#subRepo', 'nonexistent/repo');
+  await page.fill('#subRepo', 'owner/repo');
   await page.click('button:has-text("Subscribe to Releases")');
 
   await expect(page.locator('#message')).toHaveClass(/error/, {

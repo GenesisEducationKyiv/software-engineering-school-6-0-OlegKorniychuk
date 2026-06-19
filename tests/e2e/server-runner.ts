@@ -34,8 +34,6 @@ async function start() {
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
   process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
-  process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
-  process.env.TRACKER_API_KEY = 'secret-api-key';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
   process.env.PORT = '3002';

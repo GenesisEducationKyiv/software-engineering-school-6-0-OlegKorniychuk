@@ -1,0 +1,51 @@
+import 'dotenv/config';
+import express from 'express';
+import { notificationEnv } from './notification-service-envs.js';
+import { logger } from './shared/utils/logger.js';
+import {
+  emailQueue,
+  notificationDispatcher,
+  shutdownNotificationDependencies,
+} from './notification-dependencies.js';
+import { createNotificationRouter } from './modules/notification/notification.http.controller.js';
+
+const app = express();
+app.use(express.json());
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+app.use('/emails', createNotificationRouter(emailQueue, notificationDispatcher));
+
+const server = app.listen(notificationEnv.NOTIFICATION_PORT, () => {
+  logger.info(
+    `[Notification]: HTTP server listening on port ${notificationEnv.NOTIFICATION_PORT}`,
+  );
+});
+
+let isShuttingDown = false;
+
+const shutdown = async (signal: string) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info(`[Notification]: ${signal} received. Shutting down...`);
+
+  server.close(async (err) => {
+    if (err) {
+      logger.error({ err }, '[Notification]: Error closing HTTP server');
+      process.exit(1);
+    }
+    try {
+      await shutdownNotificationDependencies();
+      logger.info('[Notification]: Stopped gracefully.');
+      process.exit(0);
+    } catch (e) {
+      logger.error({ err: e }, '[Notification]: Error during shutdown');
+      process.exit(1);
+    }
+  });
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));

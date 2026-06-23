@@ -16,18 +16,28 @@ import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { Express } from 'express';
 import type { NotificationTokensService } from '../../src/modules/subscription/tokens/notification-tokens.service.interface.js';
 import type { DrizzleClient } from '../../src/shared/db/client.js';
-import type { MailpitMessagesResponse } from '../mailpit.interface.js';
+
+const mockQueueConfirmationEmail = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+const mockDispatchToSubscribers = jest.fn<() => Promise<number>>().mockResolvedValue(0);
+
+jest.unstable_mockModule(
+  '../../src/modules/notification/http-notification-facade.js',
+  () => ({
+    HttpNotificationFacade: jest.fn().mockImplementation(() => ({
+      queueConfirmationEmail: mockQueueConfirmationEmail,
+      dispatchToSubscribers: mockDispatchToSubscribers,
+    })),
+  }),
+);
 
 afterEach(() => jest.clearAllMocks());
 
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
 let rabbitmqContainer: StartedTestContainer;
-let mailpitContainer: StartedTestContainer;
 let app: Express;
 let drizzleClient: DrizzleClient;
 let shutdownDependencies: () => Promise<void>;
-let mailpitApiUrl: string;
 let tokensService: NotificationTokensService;
 
 beforeAll(async () => {
@@ -43,24 +53,15 @@ beforeAll(async () => {
   rabbitmqContainer = await new GenericContainer('rabbitmq:3-alpine')
     .withExposedPorts(5672)
     .start();
-  mailpitContainer = await new GenericContainer('axllent/mailpit')
-    .withExposedPorts(1025, 8025)
-    .start();
 
   const dbUrl = pgContainer.getConnectionUri();
   process.env.DATABASE_URL = dbUrl;
   process.env.REDIS_URL = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`;
-  process.env.EMAIL_HOST = mailpitContainer.getHost();
-  process.env.EMAIL_PORT = mailpitContainer.getMappedPort(1025).toString();
   process.env.API_KEY = 'test-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
-  process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
-  process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
+  process.env.NOTIFICATION_SERVICE_URL = 'http://localhost:9999';
   process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
-  delete process.env.EMAIL_SERVICE;
-
-  mailpitApiUrl = `http://${mailpitContainer.getHost()}:${mailpitContainer.getMappedPort(8025)}`;
 
   const migrationPool = new pg.Pool({ connectionString: dbUrl });
   const migrationDb = drizzle({ client: migrationPool });
@@ -74,10 +75,6 @@ beforeAll(async () => {
   shutdownDependencies = deps.shutdownDependencies;
   tokensService = deps.tokensService;
 
-  deps.emailWorker.worker
-    .run()
-    .catch((err) => console.error('Worker run error:', err));
-
   await deps.initNotificationRabbitMQ();
 
   const { createApp } = await import('../../src/app.js');
@@ -88,7 +85,6 @@ beforeAll(async () => {
     if (pgContainer) await pgContainer.stop();
     if (redisContainer) await redisContainer.stop();
     if (rabbitmqContainer) await rabbitmqContainer.stop();
-    if (mailpitContainer) await mailpitContainer.stop();
   };
 
   process.once('SIGTERM', cleanup);
@@ -100,7 +96,6 @@ afterAll(async () => {
   if (pgContainer) await pgContainer.stop();
   if (redisContainer) await redisContainer.stop();
   if (rabbitmqContainer) await rabbitmqContainer.stop();
-  if (mailpitContainer) await mailpitContainer.stop();
   jest.restoreAllMocks();
 });
 
@@ -110,7 +105,6 @@ beforeEach(async () => {
       sql`TRUNCATE TABLE subscriptions, subscription_repositories, subscribe_sagas RESTART IDENTITY CASCADE`,
     );
   }
-  await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
 });
 
 describe('SubscriptionController Integration Tests', () => {
@@ -135,7 +129,7 @@ describe('SubscriptionController Integration Tests', () => {
       expect(sagas[0]!.status).toBe('awaiting_repo');
     });
 
-    it('should return 201 and send email when repo already in local copy', async () => {
+    it('should return 201 and queue confirmation email when repo already in local copy', async () => {
       const email = 'user@example.com';
       const repoName = 'owner/repo';
 
@@ -158,18 +152,11 @@ describe('SubscriptionController Integration Tests', () => {
       const subs = await drizzleClient.query.subscriptions.findMany();
       expect(subs.length).toBe(1);
 
-      let mailData: MailpitMessagesResponse = { total: 0, messages: [] };
-      for (let i = 0; i < 20; i++) {
-        const mailResponse = await fetch(`${mailpitApiUrl}/api/v1/messages`);
-        mailData = (await mailResponse.json()) as MailpitMessagesResponse;
-        if (mailData.total > 0) break;
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-      expect(mailData.total).toBe(1);
-      expect(mailData.messages[0]!.Subject).toContain(
-        'Confirm your GitHub Release Subscription',
+      expect(mockQueueConfirmationEmail).toHaveBeenCalledWith(
+        email,
+        expect.any(String),
       );
-    }, 30000);
+    });
 
     it('should return 401 if API key is missing', async () => {
       const response = await request(app)

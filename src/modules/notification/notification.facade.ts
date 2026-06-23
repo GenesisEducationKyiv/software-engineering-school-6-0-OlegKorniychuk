@@ -1,10 +1,11 @@
+import type { INotificationFacade } from './notification.facade.interface.js';
 import type { EmailQueueClient } from './queue/email-queue.service.interface.js';
 import type {
   NotificationDispatcher,
   SubscriberInfo,
 } from './notifier/notification-dispatcher.interface.js';
 
-export class NotificationFacade {
+export class NotificationFacade implements INotificationFacade {
   constructor(
     private readonly emailQueue: EmailQueueClient,
     private readonly dispatcher: NotificationDispatcher,

@@ -24,7 +24,10 @@ export class ReleaseDetectedWorker {
   ) {}
 
   public async start(): Promise<void> {
-    const result = await createRabbitMQChannel(this.rabbitmqUrl);
+    const result = await createRabbitMQChannel(
+      this.rabbitmqUrl,
+      RELEASES_EXCHANGE,
+    );
     this.connection = result.connection;
     this.channel = result.channel;
 

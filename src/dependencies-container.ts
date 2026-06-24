@@ -7,9 +7,11 @@ import { subscriptionMapper } from './modules/subscription/subscription.mapper.j
 import { SubscriptionServiceImplementation } from './modules/subscription/subscription.service.js';
 import { SubscriptionFacade } from './modules/subscription/subscription.facade.js';
 import { redisConnection } from './shared/redis/redis.js';
-import { GithubRepoRepository } from './modules/tracker/repository/github-repo.repository.js';
-import { TrackerFacade } from './modules/tracker/tracker.facade.js';
 import { SubscriptionRepositoryImplementation } from './modules/subscription/repository/subscription.repository.js';
+import { SubscriptionRepoRepositoryImplementation } from './modules/subscription/repository/subscription-repo.repository.js';
+import { SubscribeSagaRepositoryImplementation } from './modules/subscription/saga/subscribe-saga.repository.js';
+import { RepoCommandPublisher } from './modules/subscription/saga/repo-command.publisher.js';
+import { RepoEventsConsumer } from './modules/subscription/saga/repo-events.consumer.js';
 import { CacheServiceImplementation } from './shared/cache/cache.service.js';
 import { EmailQueueClientImplementation } from './modules/notification/queue/email-queue.service.js';
 import { EmailWorker } from './modules/notification/queue/email-worker.service.js';
@@ -31,12 +33,8 @@ export const metricsCollector = new MetricsCollector();
 const subscriptionRepository = new SubscriptionRepositoryImplementation(
   drizzleClient,
 );
-const githubRepoRepository = new GithubRepoRepository(drizzleClient);
-
-// Tracker facade — HTTP client to tracker service
-const trackerFacade = new TrackerFacade(
-  env.TRACKER_SERVICE_URL,
-  env.TRACKER_API_KEY,
+const subscriptionRepoRepository = new SubscriptionRepoRepositoryImplementation(
+  drizzleClient,
 );
 
 // Tokens + cache
@@ -68,11 +66,16 @@ const notificationFacade = new NotificationFacade(
   notificationDispatcher,
 );
 
+// Saga
+const sagaRepository = new SubscribeSagaRepositoryImplementation(drizzleClient);
+const repoCommandPublisher = new RepoCommandPublisher(env.RABBITMQ_URL);
+
 // Subscription
 export const subscriptionService = new SubscriptionServiceImplementation(
   subscriptionRepository,
-  githubRepoRepository,
-  trackerFacade,
+  subscriptionRepoRepository,
+  sagaRepository,
+  repoCommandPublisher,
   tokensService,
   notificationFacade,
   cacheService,
@@ -117,13 +120,29 @@ export const releaseDetectedWorker = new ReleaseDetectedWorker(
   logger,
 );
 
-export const initNotificationRabbitMQ = () => releaseDetectedWorker.start();
+export const repoEventsConsumer = new RepoEventsConsumer(
+  env.RABBITMQ_URL,
+  subscriptionRepoRepository,
+  sagaRepository,
+  subscriptionRepository,
+  tokensService,
+  notificationFacade,
+  logger,
+);
+
+export const initNotificationRabbitMQ = async () => {
+  await releaseDetectedWorker.start();
+  await repoCommandPublisher.connect();
+  await repoEventsConsumer.start();
+};
 
 export const shutdownDependencies = async () => {
   logger.info('Closing background workers and queues...');
 
   await emailWorker.worker.close();
   await releaseDetectedWorker.close();
+  await repoEventsConsumer.close();
+  await repoCommandPublisher.close();
   await emailQueue.queue.close();
 
   logger.info('Closing database connections...');

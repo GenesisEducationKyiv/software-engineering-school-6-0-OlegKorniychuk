@@ -11,7 +11,7 @@ import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import pg from 'pg';
 import { sql } from 'drizzle-orm';
 import amqplib from 'amqplib';
-import { githubRepositories } from '../../src/shared/db/schema/repositories.js';
+import { subscriptionRepositories } from '../../src/shared/db/schema/subscription-repositories.js';
 import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { DrizzleClient } from '../../src/shared/db/client.js';
 import type { MailpitMessagesResponse } from '../mailpit.interface.js';
@@ -88,8 +88,6 @@ beforeAll(async () => {
   process.env.GITHUB_TOKEN = 'test-github-token';
   process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
   process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
-  process.env.TRACKER_SERVICE_URL = 'http://tracker-mock';
-  process.env.TRACKER_API_KEY = 'test-api-key';
   delete process.env.EMAIL_SERVICE;
 
   mailpitApiUrl = `http://${mailpitContainer.getHost()}:${mailpitContainer.getMappedPort(8025)}`;
@@ -123,7 +121,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await drizzleClient.execute(
-    sql`TRUNCATE TABLE subscriptions, github_repositories RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE TABLE subscriptions, subscription_repositories, subscribe_sagas RESTART IDENTITY CASCADE`,
   );
   await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
 });
@@ -131,8 +129,8 @@ beforeEach(async () => {
 describe('ReleaseDetectedWorker Integration Tests', () => {
   it('sends notification email to confirmed subscriber', async () => {
     const [repo] = await drizzleClient
-      .insert(githubRepositories)
-      .values({ name: 'owner/repo' })
+      .insert(subscriptionRepositories)
+      .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
       .returning();
     if (!repo) throw new Error('Failed to insert repo');
 
@@ -151,16 +149,14 @@ describe('ReleaseDetectedWorker Integration Tests', () => {
     const mailData = await waitForEmails(1);
 
     expect(mailData.total).toBe(1);
-    expect(mailData.messages[0]!.Subject).toBe(
-      'New Release: owner/repo v1.2.0',
-    );
+    expect(mailData.messages[0]!.Subject).toBe('New Release: owner/repo v1.2.0');
     expect(mailData.messages[0]!.To[0]!.Address).toBe('confirmed@example.com');
   }, 30000);
 
   it('sends no email when subscriber is unconfirmed', async () => {
     const [repo] = await drizzleClient
-      .insert(githubRepositories)
-      .values({ name: 'owner/repo' })
+      .insert(subscriptionRepositories)
+      .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
       .returning();
     if (!repo) throw new Error('Failed to insert repo');
 
@@ -185,16 +181,12 @@ describe('ReleaseDetectedWorker Integration Tests', () => {
 
   it('sends notification emails to all confirmed subscribers', async () => {
     const [repo] = await drizzleClient
-      .insert(githubRepositories)
-      .values({ name: 'owner/multi-repo' })
+      .insert(subscriptionRepositories)
+      .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/multi-repo' })
       .returning();
     if (!repo) throw new Error('Failed to insert repo');
 
-    const emails = [
-      'alice@example.com',
-      'bob@example.com',
-      'carol@example.com',
-    ];
+    const emails = ['alice@example.com', 'bob@example.com', 'carol@example.com'];
     await drizzleClient.insert(subscriptions).values(
       emails.map((email) => ({
         email,

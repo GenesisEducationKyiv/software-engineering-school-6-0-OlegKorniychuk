@@ -1,25 +1,30 @@
-import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
 } from './repository/subscription.repository.interface.js';
 import type { Subscription } from './repository/subscription.types.js';
+import type { SubscriptionRepoRepository } from './repository/subscription-repo.repository.interface.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { NotificationFacade } from '../notification/notification.facade.js';
 import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
+import type { SubscribeSagaRepository } from './saga/subscribe-saga.repository.interface.js';
+import type { RepoCommandPublisher } from './saga/repo-command.publisher.js';
 import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
-import type { TrackerFacade } from '../tracker/tracker.facade.js';
+import type {
+  SubscribeResult,
+  SubscriptionService,
+} from './subscription.service.interface.js';
 import {
   AppError,
   AppErrorTypesEnum,
 } from '../../shared/utils/error-handling/errors/app.error.js';
-import type { SubscriptionService } from './subscription.service.interface.js';
 
 export class SubscriptionServiceImplementation implements SubscriptionService {
   constructor(
     private readonly subscriptionRepository: SubscriptionRepository,
-    private readonly githubRepoRepository: RepoRepository,
-    private readonly tracker: TrackerFacade,
+    private readonly subscriptionRepoRepository: SubscriptionRepoRepository,
+    private readonly sagaRepository: SubscribeSagaRepository,
+    private readonly repoCommandPublisher: RepoCommandPublisher,
     private readonly tokensService: NotificationTokensService,
     private readonly notification: NotificationFacade,
     private readonly cacheService: CacheService,
@@ -33,16 +38,17 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     email: string,
     owner: string,
     repositoryName: string,
-  ): Promise<void> {
+  ): Promise<SubscribeResult> {
     const repoFullName = `${owner}/${repositoryName}`;
-    let repo = await this.githubRepoRepository.findByName(repoFullName);
+    const localRepo =
+      await this.subscriptionRepoRepository.findByName(repoFullName);
 
-    if (!repo) {
-      await this.tracker.verifyRepository(owner, repositoryName);
-      repo = await this.githubRepoRepository.createOne({ name: repoFullName });
-    } else {
+    if (localRepo) {
       const existingSubscription =
-        await this.subscriptionRepository.findOneByRepoAndEmail(email, repo.id);
+        await this.subscriptionRepository.findOneByRepoAndEmail(
+          email,
+          localRepo.id,
+        );
 
       if (existingSubscription)
         throw new AppError(
@@ -50,18 +56,31 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
           'This user is already subscribed to this repo',
           { entity: 'subscription' },
         );
+
+      const subscription = await this.subscriptionRepository.createOne({
+        email,
+        githubRepositoryId: localRepo.id,
+      });
+
+      const confirmToken = this.tokensService.generateConfirmToken(
+        subscription.id,
+      );
+      await this.notification.queueConfirmationEmail(email, confirmToken);
+
+      return { status: 'created' };
     }
 
-    const subscription = await this.subscriptionRepository.createOne({
+    const saga = await this.sagaRepository.create({
       email,
-      githubRepositoryId: repo.id,
+      repoName: repoFullName,
+    });
+    await this.repoCommandPublisher.publishCreateRequested({
+      sagaId: saga.id,
+      owner,
+      repoName: repositoryName,
     });
 
-    const confirmToken = this.tokensService.generateConfirmToken(
-      subscription.id,
-    );
-
-    await this.notification.queueConfirmationEmail(email, confirmToken);
+    return { status: 'pending', sagaId: saga.id };
   }
 
   public async confirmSubscription(token: string): Promise<void> {

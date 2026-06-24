@@ -3,25 +3,28 @@ import { SubscriptionServiceImplementation } from './subscription.service.js';
 import { AppErrorTypesEnum } from '../../shared/utils/error-handling/errors/app.error.js';
 import { NotificationTokenTypesEnum } from './tokens/token-types.enum.js';
 
-import type { RepoRepository } from '../tracker/repository/repo-repository.interface.js';
+import type { SubscriptionRepoRepository } from './repository/subscription-repo.repository.interface.js';
 import type {
   SubscriptionRepository,
   SubscriptionWithRepository,
 } from './repository/subscription.repository.interface.js';
 import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
-import type { TrackerFacade } from '../tracker/tracker.facade.js';
 import type { NotificationFacade } from '../notification/notification.facade.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
-import type { GithubRepo } from '../tracker/repository/github-repo.types.js';
+import type { SubscriptionRepo } from './repository/subscription-repo.types.js';
 import type { Subscription } from './repository/subscription.types.js';
 import type { NotificationTokenPayload } from './tokens/notification-tokens.types.js';
+import type { SubscribeSagaRepository } from './saga/subscribe-saga.repository.interface.js';
+import type { RepoCommandPublisher } from './saga/repo-command.publisher.js';
+import type { SubscribeSaga } from './saga/subscribe-saga.types.js';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionServiceImplementation;
 
   let mockSubscriptionRepo: jest.Mocked<SubscriptionRepository>;
-  let mockGithubRepo: jest.Mocked<RepoRepository>;
-  let mockTracker: jest.Mocked<TrackerFacade>;
+  let mockSubscriptionRepoRepo: jest.Mocked<SubscriptionRepoRepository>;
+  let mockSagaRepository: jest.Mocked<SubscribeSagaRepository>;
+  let mockRepoCommandPublisher: jest.Mocked<RepoCommandPublisher>;
   let mockTokensService: jest.Mocked<NotificationTokensService>;
   let mockNotification: jest.Mocked<NotificationFacade>;
   let mockCacheService: jest.Mocked<CacheService>;
@@ -35,14 +38,23 @@ describe('SubscriptionService', () => {
       findByEmailWithRepo: jest.fn(),
     } as unknown as jest.Mocked<SubscriptionRepository>;
 
-    mockGithubRepo = {
+    mockSubscriptionRepoRepo = {
       findByName: jest.fn(),
+      findById: jest.fn(),
       createOne: jest.fn(),
-    } as unknown as jest.Mocked<RepoRepository>;
+    } as unknown as jest.Mocked<SubscriptionRepoRepository>;
 
-    mockTracker = {
-      verifyRepository: jest.fn(),
-    } as unknown as jest.Mocked<TrackerFacade>;
+    mockSagaRepository = {
+      create: jest.fn(),
+      findById: jest.fn(),
+      findAwaitingByRepoName: jest.fn(),
+      markCompleted: jest.fn(),
+      markFailed: jest.fn(),
+    } as unknown as jest.Mocked<SubscribeSagaRepository>;
+
+    mockRepoCommandPublisher = {
+      publishCreateRequested: jest.fn(),
+    } as unknown as jest.Mocked<RepoCommandPublisher>;
 
     mockTokensService = {
       generateConfirmToken: jest.fn(),
@@ -61,8 +73,9 @@ describe('SubscriptionService', () => {
 
     service = new SubscriptionServiceImplementation(
       mockSubscriptionRepo,
-      mockGithubRepo,
-      mockTracker,
+      mockSubscriptionRepoRepo,
+      mockSagaRepository,
+      mockRepoCommandPublisher,
       mockTokensService,
       mockNotification,
       mockCacheService,
@@ -77,13 +90,14 @@ describe('SubscriptionService', () => {
     const mockRepoId = 'repo-uuid-123';
     const mockSubId = 'sub-uuid-456';
     const mockToken = 'mock-jwt-token';
+    const mockSagaId = 'saga-uuid-789';
 
-    it('should create subscription and send email when repository already exists in DB', async () => {
-      mockGithubRepo.findByName.mockResolvedValueOnce({
+    it('should create subscription synchronously when repo exists locally', async () => {
+      mockSubscriptionRepoRepo.findByName.mockResolvedValueOnce({
         id: mockRepoId,
         name: mockRepoFullName,
-        lastSeenTag: null,
-      } as GithubRepo);
+      } as SubscriptionRepo);
+      mockSubscriptionRepo.findOneByRepoAndEmail.mockResolvedValueOnce(null);
       mockSubscriptionRepo.createOne.mockResolvedValueOnce({
         id: mockSubId,
         email: mockEmail,
@@ -92,53 +106,64 @@ describe('SubscriptionService', () => {
       } as Subscription);
       mockTokensService.generateConfirmToken.mockReturnValueOnce(mockToken);
 
-      await service.subscribe(mockEmail, mockOwner, mockRepoName);
+      const result = await service.subscribe(
+        mockEmail,
+        mockOwner,
+        mockRepoName,
+      );
 
-      expect(mockGithubRepo.findByName).toHaveBeenCalledWith(mockRepoFullName);
-      expect(mockTracker.verifyRepository).not.toHaveBeenCalled();
-      expect(mockGithubRepo.createOne).not.toHaveBeenCalled();
+      expect(result).toEqual({ status: 'created' });
+      expect(mockSubscriptionRepoRepo.findByName).toHaveBeenCalledWith(
+        mockRepoFullName,
+      );
       expect(mockSubscriptionRepo.createOne).toHaveBeenCalledWith({
         email: mockEmail,
         githubRepositoryId: mockRepoId,
       });
-      expect(mockTokensService.generateConfirmToken).toHaveBeenCalledWith(
-        mockSubId,
-      );
       expect(mockNotification.queueConfirmationEmail).toHaveBeenCalledWith(
         mockEmail,
         mockToken,
       );
+      expect(mockSagaRepository.create).not.toHaveBeenCalled();
     });
 
-    it('should verify repository and create it if not found in DB', async () => {
-      mockGithubRepo.findByName.mockResolvedValueOnce(null);
-      mockTracker.verifyRepository.mockResolvedValueOnce();
-      mockGithubRepo.createOne.mockResolvedValueOnce({
-        id: mockRepoId,
-        name: mockRepoFullName,
-      } as GithubRepo);
-      mockSubscriptionRepo.createOne.mockResolvedValueOnce({
-        id: mockSubId,
+    it('should start saga and return pending when repo not in local copy', async () => {
+      mockSubscriptionRepoRepo.findByName.mockResolvedValueOnce(null);
+      mockSagaRepository.create.mockResolvedValueOnce({
+        id: mockSagaId,
         email: mockEmail,
-        githubRepositoryId: mockRepoId,
-      } as Subscription);
-      mockTokensService.generateConfirmToken.mockReturnValueOnce(mockToken);
+        repoName: mockRepoFullName,
+        status: 'awaiting_repo',
+        failureReason: null,
+        createdAt: new Date(),
+      } as SubscribeSaga);
 
-      await service.subscribe(mockEmail, mockOwner, mockRepoName);
-
-      expect(mockTracker.verifyRepository).toHaveBeenCalledWith(
+      const result = await service.subscribe(
+        mockEmail,
         mockOwner,
         mockRepoName,
       );
-      expect(mockGithubRepo.createOne).toHaveBeenCalledWith({
-        name: mockRepoFullName,
+
+      expect(result).toEqual({ status: 'pending', sagaId: mockSagaId });
+      expect(mockSagaRepository.create).toHaveBeenCalledWith({
+        email: mockEmail,
+        repoName: mockRepoFullName,
       });
+      expect(
+        mockRepoCommandPublisher.publishCreateRequested,
+      ).toHaveBeenCalledWith({
+        sagaId: mockSagaId,
+        owner: mockOwner,
+        repoName: mockRepoName,
+      });
+      expect(mockSubscriptionRepo.createOne).not.toHaveBeenCalled();
     });
 
-    it('should throw AppError if user is already subscribed', async () => {
-      mockGithubRepo.findByName.mockResolvedValueOnce({
+    it('should throw AppError if user is already subscribed (repo known locally)', async () => {
+      mockSubscriptionRepoRepo.findByName.mockResolvedValueOnce({
         id: mockRepoId,
-      } as GithubRepo);
+        name: mockRepoFullName,
+      } as SubscriptionRepo);
       mockSubscriptionRepo.findOneByRepoAndEmail.mockResolvedValueOnce({
         id: 'existing-sub',
       } as Subscription);

@@ -21,10 +21,18 @@ export class SubscriptionController {
     const body = req.body as SubscribeInput;
     const { owner, repoName } = res.locals;
 
-    await this.service.subscribe(body.email, owner, repoName);
+    const result = await this.service.subscribe(body.email, owner, repoName);
+
+    if (result.status === 'pending') {
+      res.status(202).json({
+        message: 'Subscription pending repository setup.',
+        sagaId: result.sagaId,
+      });
+      return;
+    }
 
     res
-      .status(200)
+      .status(201)
       .json({ message: 'Subscription successful. Confirmation email sent.' });
   }
 

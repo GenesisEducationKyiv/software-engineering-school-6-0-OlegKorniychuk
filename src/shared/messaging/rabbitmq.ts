@@ -1,9 +1,8 @@
 import amqplib from 'amqplib';
-import { RELEASES_EXCHANGE } from './release-detected.event.js';
 
-export async function createRabbitMQChannel(url: string) {
+export async function createRabbitMQChannel(url: string, exchange: string) {
   const connection = await amqplib.connect(url);
   const channel = await connection.createChannel();
-  await channel.assertExchange(RELEASES_EXCHANGE, 'topic', { durable: true });
+  await channel.assertExchange(exchange, 'topic', { durable: true });
   return { connection, channel };
 }

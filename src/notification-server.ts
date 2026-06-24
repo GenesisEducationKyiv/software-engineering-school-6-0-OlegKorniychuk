@@ -1,5 +1,7 @@
 import 'dotenv/config';
+import http2 from 'node:http2';
 import express from 'express';
+import { connectNodeAdapter } from '@connectrpc/connect-node';
 import { notificationEnv } from './notification-service-envs.js';
 import { logger } from './shared/utils/logger.js';
 import {
@@ -8,6 +10,7 @@ import {
   shutdownNotificationDependencies,
 } from './notification-dependencies.js';
 import { createNotificationRouter } from './modules/notification/notification.http.controller.js';
+import { registerNotificationGrpcHandler } from './modules/notification/grpc/notification.grpc.handler.js';
 
 const app = express();
 app.use(express.json());
@@ -18,9 +21,23 @@ app.get('/health', (_req, res) => {
 
 app.use('/emails', createNotificationRouter(emailQueue, notificationDispatcher));
 
-const server = app.listen(notificationEnv.NOTIFICATION_PORT, () => {
+const httpServer = app.listen(notificationEnv.NOTIFICATION_PORT, () => {
   logger.info(
     `[Notification]: HTTP server listening on port ${notificationEnv.NOTIFICATION_PORT}`,
+  );
+});
+
+const grpcServer = http2.createServer(
+  connectNodeAdapter({
+    routes(router) {
+      registerNotificationGrpcHandler(router, emailQueue, notificationDispatcher);
+    },
+  }),
+);
+
+grpcServer.listen(notificationEnv.NOTIFICATION_GRPC_PORT, () => {
+  logger.info(
+    `[Notification]: gRPC server listening on port ${notificationEnv.NOTIFICATION_GRPC_PORT}`,
   );
 });
 
@@ -31,7 +48,9 @@ const shutdown = async (signal: string) => {
   isShuttingDown = true;
   logger.info(`[Notification]: ${signal} received. Shutting down...`);
 
-  server.close(async (err) => {
+  grpcServer.close();
+
+  httpServer.close(async (err) => {
     if (err) {
       logger.error({ err }, '[Notification]: Error closing HTTP server');
       process.exit(1);

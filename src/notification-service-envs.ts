@@ -3,6 +3,7 @@ import { z } from 'zod';
 const envSchema = z
   .object({
     NOTIFICATION_PORT: z.coerce.number().default(3002),
+    NOTIFICATION_GRPC_PORT: z.coerce.number().default(50051),
     REDIS_URL: z.string().min(1, 'REDIS_URL is required'),
     APP_DOMAIN: z.string().min(1, 'APP_DOMAIN is required'),
     EMAIL_SERVICE_USERNAME: z

@@ -9,7 +9,7 @@ export class GrpcNotificationFacade implements INotificationFacade {
     typeof createClient<typeof NotificationService>
   >;
 
-  public constructor(baseUrl: string) {
+  constructor(baseUrl: string) {
     const transport = createGrpcTransport({ baseUrl });
     this.client = createClient(NotificationService, transport);
   }

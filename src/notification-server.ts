@@ -19,7 +19,10 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-app.use('/emails', createNotificationRouter(emailQueue, notificationDispatcher));
+app.use(
+  '/emails',
+  createNotificationRouter(emailQueue, notificationDispatcher),
+);
 
 const httpServer = app.listen(notificationEnv.NOTIFICATION_PORT, () => {
   logger.info(
@@ -30,7 +33,11 @@ const httpServer = app.listen(notificationEnv.NOTIFICATION_PORT, () => {
 const grpcServer = http2.createServer(
   connectNodeAdapter({
     routes(router) {
-      registerNotificationGrpcHandler(router, emailQueue, notificationDispatcher);
+      registerNotificationGrpcHandler(
+        router,
+        emailQueue,
+        notificationDispatcher,
+      );
     },
   }),
 );

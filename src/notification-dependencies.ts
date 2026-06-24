@@ -54,7 +54,12 @@ emailWorker.registerHandler(JobTypesEnum.sendConfirmation, async (job) => {
 
 emailWorker.registerHandler(JobTypesEnum.sendNotification, async (job) => {
   const data = job.data as SendNotificationEmailPayload;
-  await notifier.sendNotification([data.email], data.repo, data.release, data.token);
+  await notifier.sendNotification(
+    [data.email],
+    data.repo,
+    data.release,
+    data.token,
+  );
 });
 
 export const shutdownNotificationDependencies = async () => {

@@ -2,44 +2,58 @@
 // @generated from file notification/v1/notification.proto (package notification.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { EmptySchema } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type {
+  GenFile,
+  GenMessage,
+  GenService,
+} from '@bufbuild/protobuf/codegenv2';
+import {
+  fileDesc,
+  messageDesc,
+  serviceDesc,
+} from '@bufbuild/protobuf/codegenv2';
+import type { EmptySchema } from '@bufbuild/protobuf/wkt';
+import { file_google_protobuf_empty } from '@bufbuild/protobuf/wkt';
+import type { Message } from '@bufbuild/protobuf';
 
 /**
  * Describes the file notification/v1/notification.proto.
  */
-export const file_notification_v1_notification: GenFile = /*@__PURE__*/
-  fileDesc("CiJub3RpZmljYXRpb24vdjEvbm90aWZpY2F0aW9uLnByb3RvEg9ub3RpZmljYXRpb24udjEiPQodUXVldWVDb25maXJtYXRpb25FbWFpbFJlcXVlc3QSDQoFZW1haWwYASABKAkSDQoFdG9rZW4YAiABKAkiNgoKU3Vic2NyaWJlchINCgVlbWFpbBgBIAEoCRIZChF1bnN1YnNjcmliZV90b2tlbhgCIAEoCSJrCg9EaXNwYXRjaFJlcXVlc3QSMAoLc3Vic2NyaWJlcnMYASADKAsyGy5ub3RpZmljYXRpb24udjEuU3Vic2NyaWJlchIRCglyZXBvX25hbWUYAiABKAkSEwoLcmVsZWFzZV90YWcYAyABKAkiIgoQRGlzcGF0Y2hSZXNwb25zZRIOCgZxdWV1ZWQYASABKAUy1QEKE05vdGlmaWNhdGlvblNlcnZpY2USYAoWUXVldWVDb25maXJtYXRpb25FbWFpbBIuLm5vdGlmaWNhdGlvbi52MS5RdWV1ZUNvbmZpcm1hdGlvbkVtYWlsUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJcChVEaXNwYXRjaFRvU3Vic2NyaWJlcnMSIC5ub3RpZmljYXRpb24udjEuRGlzcGF0Y2hSZXF1ZXN0GiEubm90aWZpY2F0aW9uLnYxLkRpc3BhdGNoUmVzcG9uc2ViBnByb3RvMw", [file_google_protobuf_empty]);
+export const file_notification_v1_notification: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    'CiJub3RpZmljYXRpb24vdjEvbm90aWZpY2F0aW9uLnByb3RvEg9ub3RpZmljYXRpb24udjEiPQodUXVldWVDb25maXJtYXRpb25FbWFpbFJlcXVlc3QSDQoFZW1haWwYASABKAkSDQoFdG9rZW4YAiABKAkiNgoKU3Vic2NyaWJlchINCgVlbWFpbBgBIAEoCRIZChF1bnN1YnNjcmliZV90b2tlbhgCIAEoCSJrCg9EaXNwYXRjaFJlcXVlc3QSMAoLc3Vic2NyaWJlcnMYASADKAsyGy5ub3RpZmljYXRpb24udjEuU3Vic2NyaWJlchIRCglyZXBvX25hbWUYAiABKAkSEwoLcmVsZWFzZV90YWcYAyABKAkiIgoQRGlzcGF0Y2hSZXNwb25zZRIOCgZxdWV1ZWQYASABKAUy1QEKE05vdGlmaWNhdGlvblNlcnZpY2USYAoWUXVldWVDb25maXJtYXRpb25FbWFpbBIuLm5vdGlmaWNhdGlvbi52MS5RdWV1ZUNvbmZpcm1hdGlvbkVtYWlsUmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJcChVEaXNwYXRjaFRvU3Vic2NyaWJlcnMSIC5ub3RpZmljYXRpb24udjEuRGlzcGF0Y2hSZXF1ZXN0GiEubm90aWZpY2F0aW9uLnYxLkRpc3BhdGNoUmVzcG9uc2ViBnByb3RvMw',
+    [file_google_protobuf_empty],
+  );
 
 /**
  * @generated from message notification.v1.QueueConfirmationEmailRequest
  */
-export type QueueConfirmationEmailRequest = Message<"notification.v1.QueueConfirmationEmailRequest"> & {
-  /**
-   * @generated from field: string email = 1;
-   */
-  email: string;
+export type QueueConfirmationEmailRequest =
+  Message<'notification.v1.QueueConfirmationEmailRequest'> & {
+    /**
+     * @generated from field: string email = 1;
+     */
+    email: string;
 
-  /**
-   * @generated from field: string token = 2;
-   */
-  token: string;
-};
+    /**
+     * @generated from field: string token = 2;
+     */
+    token: string;
+  };
 
 /**
  * Describes the message notification.v1.QueueConfirmationEmailRequest.
  * Use `create(QueueConfirmationEmailRequestSchema)` to create a new message.
  */
-export const QueueConfirmationEmailRequestSchema: GenMessage<QueueConfirmationEmailRequest> = /*@__PURE__*/
+export const QueueConfirmationEmailRequestSchema: GenMessage<QueueConfirmationEmailRequest> =
+  /*@__PURE__*/
   messageDesc(file_notification_v1_notification, 0);
 
 /**
  * @generated from message notification.v1.Subscriber
  */
-export type Subscriber = Message<"notification.v1.Subscriber"> & {
+export type Subscriber = Message<'notification.v1.Subscriber'> & {
   /**
    * @generated from field: string email = 1;
    */
@@ -55,13 +69,14 @@ export type Subscriber = Message<"notification.v1.Subscriber"> & {
  * Describes the message notification.v1.Subscriber.
  * Use `create(SubscriberSchema)` to create a new message.
  */
-export const SubscriberSchema: GenMessage<Subscriber> = /*@__PURE__*/
+export const SubscriberSchema: GenMessage<Subscriber> =
+  /*@__PURE__*/
   messageDesc(file_notification_v1_notification, 1);
 
 /**
  * @generated from message notification.v1.DispatchRequest
  */
-export type DispatchRequest = Message<"notification.v1.DispatchRequest"> & {
+export type DispatchRequest = Message<'notification.v1.DispatchRequest'> & {
   /**
    * @generated from field: repeated notification.v1.Subscriber subscribers = 1;
    */
@@ -82,13 +97,14 @@ export type DispatchRequest = Message<"notification.v1.DispatchRequest"> & {
  * Describes the message notification.v1.DispatchRequest.
  * Use `create(DispatchRequestSchema)` to create a new message.
  */
-export const DispatchRequestSchema: GenMessage<DispatchRequest> = /*@__PURE__*/
+export const DispatchRequestSchema: GenMessage<DispatchRequest> =
+  /*@__PURE__*/
   messageDesc(file_notification_v1_notification, 2);
 
 /**
  * @generated from message notification.v1.DispatchResponse
  */
-export type DispatchResponse = Message<"notification.v1.DispatchResponse"> & {
+export type DispatchResponse = Message<'notification.v1.DispatchResponse'> & {
   /**
    * @generated from field: int32 queued = 1;
    */
@@ -99,7 +115,8 @@ export type DispatchResponse = Message<"notification.v1.DispatchResponse"> & {
  * Describes the message notification.v1.DispatchResponse.
  * Use `create(DispatchResponseSchema)` to create a new message.
  */
-export const DispatchResponseSchema: GenMessage<DispatchResponse> = /*@__PURE__*/
+export const DispatchResponseSchema: GenMessage<DispatchResponse> =
+  /*@__PURE__*/
   messageDesc(file_notification_v1_notification, 3);
 
 /**
@@ -110,18 +127,16 @@ export const NotificationService: GenService<{
    * @generated from rpc notification.v1.NotificationService.QueueConfirmationEmail
    */
   queueConfirmationEmail: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof QueueConfirmationEmailRequestSchema;
     output: typeof EmptySchema;
-  },
+  };
   /**
    * @generated from rpc notification.v1.NotificationService.DispatchToSubscribers
    */
   dispatchToSubscribers: {
-    methodKind: "unary";
+    methodKind: 'unary';
     input: typeof DispatchRequestSchema;
     output: typeof DispatchResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_notification_v1_notification, 0);
-
+  };
+}> = /*@__PURE__*/ serviceDesc(file_notification_v1_notification, 0);

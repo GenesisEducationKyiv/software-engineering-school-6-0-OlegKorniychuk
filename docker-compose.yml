@@ -14,6 +14,8 @@ services:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
       - API_KEY=secret-api-key
       - NOTIFICATION_TOKEN_SECRET=test-notification-secret
+      - NOTIFICATION_TRANSPORT=grpc
+      - NOTIFICATION_GRPC_URL=http://notification:50051
       - NOTIFICATION_SERVICE_URL=http://notification:3002
       - LOG_FILE=/var/log/github-release-notifier/app.log
       - TRACKER_SERVICE_URL=http://tracker:3001
@@ -42,8 +44,10 @@ services:
     container_name: releases_notification
     ports:
       - '3002:3002'
+      - '50051:50051'
     environment:
       - NOTIFICATION_PORT=3002
+      - NOTIFICATION_GRPC_PORT=50051
       - REDIS_URL=redis://redis:6379
       - APP_DOMAIN=http://localhost:3000
       - EMAIL_SERVICE=${EMAIL_SERVICE}

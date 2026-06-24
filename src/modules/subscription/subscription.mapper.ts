@@ -1,0 +1,20 @@
+import type { SubscriptionWithRepository } from './repository/subscription.repository.interface.js';
+import type { SubscriptionResponse } from './subscription.types.js';
+
+export interface SubscriptionResponseMapper {
+  toListResponse(
+    entities: SubscriptionWithRepository[],
+  ): SubscriptionResponse[];
+}
+
+export const subscriptionMapper: SubscriptionResponseMapper = {
+  toListResponse(
+    entities: SubscriptionWithRepository[],
+  ): SubscriptionResponse[] {
+    return entities.map((e) => ({
+      email: e.email,
+      repo: e.githubRepository.name,
+      confirmed: e.confirmed,
+    }));
+  },
+};

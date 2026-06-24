@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package notification.v1;
+
+import "google/protobuf/empty.proto";
+
+service NotificationService {
+  rpc QueueConfirmationEmail(QueueConfirmationEmailRequest) returns (google.protobuf.Empty);
+  rpc DispatchToSubscribers(DispatchRequest) returns (DispatchResponse);
+}
+
+message QueueConfirmationEmailRequest {
+  string email = 1;
+  string token = 2;
+}
+
+message Subscriber {
+  string email = 1;
+  string unsubscribe_token = 2;
+}
+
+message DispatchRequest {
+  repeated Subscriber subscribers = 1;
+  string repo_name = 2;
+  string release_tag = 3;
+}
+
+message DispatchResponse {
+  int32 queued = 1;
+}

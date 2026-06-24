@@ -11,7 +11,7 @@ import {
 } from '../../../shared/messaging/repository.events.js';
 import type { SubscriptionRepoRepository } from '../repository/subscription-repo.repository.interface.js';
 import type { SubscribeSagaRepository } from './subscribe-saga.repository.interface.js';
-import type { NotificationFacade } from '../../notification/notification.facade.js';
+import type { INotificationFacade } from '../../notification/notification.facade.interface.js';
 import type { SubscriptionRepository } from '../repository/subscription.repository.interface.js';
 import type { NotificationTokensService } from '../tokens/notification-tokens.service.interface.js';
 
@@ -26,7 +26,7 @@ export class RepoEventsConsumer {
     private readonly sagaRepository: SubscribeSagaRepository,
     private readonly subscriptionRepository: SubscriptionRepository,
     private readonly tokensService: NotificationTokensService,
-    private readonly notification: NotificationFacade,
+    private readonly notification: INotificationFacade,
     private readonly logger: Logger,
   ) {}
 

@@ -5,7 +5,7 @@ import type {
 import type { Subscription } from './repository/subscription.types.js';
 import type { SubscriptionRepoRepository } from './repository/subscription-repo.repository.interface.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
-import type { NotificationFacade } from '../notification/notification.facade.js';
+import type { INotificationFacade } from '../notification/notification.facade.interface.js';
 import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
 import type { SubscribeSagaRepository } from './saga/subscribe-saga.repository.interface.js';
 import type { RepoCommandPublisher } from './saga/repo-command.publisher.js';
@@ -26,7 +26,7 @@ export class SubscriptionServiceImplementation implements SubscriptionService {
     private readonly sagaRepository: SubscribeSagaRepository,
     private readonly repoCommandPublisher: RepoCommandPublisher,
     private readonly tokensService: NotificationTokensService,
-    private readonly notification: NotificationFacade,
+    private readonly notification: INotificationFacade,
     private readonly cacheService: CacheService,
   ) {}
 

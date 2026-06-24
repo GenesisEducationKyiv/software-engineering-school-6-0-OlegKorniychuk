@@ -34,3 +34,9 @@ FROM base AS tracker
 EXPOSE 3001
 
 CMD ["node", "dist/tracker-server.js"]
+
+FROM base AS notification
+
+EXPOSE 3002
+
+CMD ["node", "dist/notification-server.js"]

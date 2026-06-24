@@ -17,7 +17,10 @@
     "test:integration": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest tests/integration/",
     "test:e2e": "cross-env NODE_ENV=test playwright test",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
-    "format": "prettier --check 'src/**/*.{ts,tsx,json,md}'"
+    "format": "prettier --check 'src/**/*.{ts,tsx,json,md}'",
+    "proto:gen": "buf generate",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "postinstall": "node scripts/install-ghz.js"
   },
   "repository": {
     "type": "git",
@@ -31,12 +34,15 @@
   },
   "homepage": "https://github.com/OlegKorniychuk/github-release-notification-api#readme",
   "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
+    "@bufbuild/protoc-gen-es": "^2.12.1",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.60.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@testcontainers/redis": "^11.14.0",
     "@types/amqplib": "^0.10.8",
+    "@types/autocannon": "^7.12.7",
     "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/ioredis": "^4.28.10",
@@ -48,6 +54,7 @@
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
+    "autocannon": "^8.0.0",
     "cross-env": "^10.1.0",
     "drizzle-kit": "^1.0.0-beta.20",
     "eslint": "^10.3.0",
@@ -63,11 +70,15 @@
     "supertest": "^7.2.2",
     "testcontainers": "^11.14.0",
     "ts-jest": "^29.4.9",
+    "ts-node": "^10.9.2",
     "tsx": "^4.22.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.59.2"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
+    "@connectrpc/connect": "^2.1.2",
+    "@connectrpc/connect-node": "^2.1.2",
     "@elastic/ecs-pino-format": "^1.5.0",
     "amqplib": "^2.0.1",
     "bullmq": "^5.73.4",

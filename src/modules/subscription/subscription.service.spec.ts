@@ -9,7 +9,7 @@ import type {
   SubscriptionWithRepository,
 } from './repository/subscription.repository.interface.js';
 import type { NotificationTokensService } from './tokens/notification-tokens.service.interface.js';
-import type { NotificationFacade } from '../notification/notification.facade.js';
+import type { INotificationFacade } from '../notification/notification.facade.interface.js';
 import type { CacheService } from '../../shared/cache/cache.service.interface.js';
 import type { SubscriptionRepo } from './repository/subscription-repo.types.js';
 import type { Subscription } from './repository/subscription.types.js';
@@ -26,7 +26,7 @@ describe('SubscriptionService', () => {
   let mockSagaRepository: jest.Mocked<SubscribeSagaRepository>;
   let mockRepoCommandPublisher: jest.Mocked<RepoCommandPublisher>;
   let mockTokensService: jest.Mocked<NotificationTokensService>;
-  let mockNotification: jest.Mocked<NotificationFacade>;
+  let mockNotification: jest.Mocked<INotificationFacade>;
   let mockCacheService: jest.Mocked<CacheService>;
 
   beforeEach(() => {
@@ -63,7 +63,7 @@ describe('SubscriptionService', () => {
 
     mockNotification = {
       queueConfirmationEmail: jest.fn(),
-    } as unknown as jest.Mocked<NotificationFacade>;
+    } as unknown as jest.Mocked<INotificationFacade>;
 
     mockCacheService = {
       get: jest.fn(),

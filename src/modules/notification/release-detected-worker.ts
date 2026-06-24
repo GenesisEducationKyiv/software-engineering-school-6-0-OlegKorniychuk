@@ -7,7 +7,7 @@ import {
   RELEASE_DETECTED_QUEUE,
   type ReleaseDetectedEvent,
 } from '../../shared/messaging/release-detected.event.js';
-import type { NotificationFacade } from './notification.facade.js';
+import type { INotificationFacade } from './notification.facade.interface.js';
 import type { SubscriptionFacade } from '../subscription/subscription.facade.js';
 import type { ConsumeMessage } from 'amqplib';
 
@@ -19,7 +19,7 @@ export class ReleaseDetectedWorker {
   constructor(
     private readonly rabbitmqUrl: string,
     private readonly subscription: SubscriptionFacade,
-    private readonly notification: NotificationFacade,
+    private readonly notification: INotificationFacade,
     private readonly logger: Logger,
   ) {}
 
@@ -74,11 +74,13 @@ export class ReleaseDetectedWorker {
     const subscribers =
       await this.subscription.getConfirmedSubscribersWithTokens(repoId);
 
-    await this.notification.dispatchToSubscribers(
-      subscribers,
-      repoName,
-      releaseTag,
-    );
+    if (subscribers.length > 0) {
+      await this.notification.dispatchToSubscribers(
+        subscribers,
+        repoName,
+        releaseTag,
+      );
+    }
 
     this.logger.info(
       { repoName, releaseTag, count: subscribers.length },

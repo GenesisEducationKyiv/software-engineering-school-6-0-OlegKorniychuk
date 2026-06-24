@@ -14,20 +14,31 @@ import amqplib from 'amqplib';
 import { subscriptionRepositories } from '../../src/shared/db/schema/subscription-repositories.js';
 import { subscriptions } from '../../src/shared/db/schema/subscriptions.js';
 import type { DrizzleClient } from '../../src/shared/db/client.js';
-import type { MailpitMessagesResponse } from '../mailpit.interface.js';
+import type { SubscriberInfo } from '../../src/modules/notification/notifier/notification-dispatcher.interface.js';
 import {
   RELEASES_EXCHANGE,
   RELEASE_DETECTED_ROUTING_KEY,
   type ReleaseDetectedEvent,
 } from '../../src/shared/messaging/release-detected.event.js';
 
+const mockQueueConfirmationEmail = jest.fn<() => Promise<void>>().mockResolvedValue(undefined);
+const mockDispatchToSubscribers = jest.fn<() => Promise<number>>().mockResolvedValue(0);
+
+jest.unstable_mockModule(
+  '../../src/modules/notification/http-notification-facade.js',
+  () => ({
+    HttpNotificationFacade: jest.fn().mockImplementation(() => ({
+      queueConfirmationEmail: mockQueueConfirmationEmail,
+      dispatchToSubscribers: mockDispatchToSubscribers,
+    })),
+  }),
+);
+
 let pgContainer: StartedPostgreSqlContainer;
 let redisContainer: StartedRedisContainer;
 let rabbitmqContainer: StartedTestContainer;
-let mailpitContainer: StartedTestContainer;
 let drizzleClient: DrizzleClient;
 let shutdownDependencies: () => Promise<void>;
-let mailpitApiUrl: string;
 
 async function publishReleaseEvent(
   payload: ReleaseDetectedEvent,
@@ -45,19 +56,12 @@ async function publishReleaseEvent(
   await conn.close();
 }
 
-async function waitForEmails(
-  count: number,
-  timeoutMs = 15000,
-): Promise<MailpitMessagesResponse> {
+async function waitForDispatch(timeoutMs = 15000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const res = await fetch(`${mailpitApiUrl}/api/v1/messages`);
-    const data = (await res.json()) as MailpitMessagesResponse;
-    if (data.total >= count) return data;
-    await new Promise((r) => setTimeout(r, 500));
+    if (mockDispatchToSubscribers.mock.calls.length > 0) return;
+    await new Promise((r) => setTimeout(r, 200));
   }
-  const res = await fetch(`${mailpitApiUrl}/api/v1/messages`);
-  return (await res.json()) as MailpitMessagesResponse;
 }
 
 beforeAll(async () => {
@@ -73,24 +77,16 @@ beforeAll(async () => {
   rabbitmqContainer = await new GenericContainer('rabbitmq:3-alpine')
     .withExposedPorts(5672)
     .start();
-  mailpitContainer = await new GenericContainer('axllent/mailpit')
-    .withExposedPorts(1025, 8025)
-    .start();
 
   const dbUrl = pgContainer.getConnectionUri();
   process.env.DATABASE_URL = dbUrl;
   process.env.REDIS_URL = `redis://${redisContainer.getHost()}:${redisContainer.getMappedPort(6379)}`;
   process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
-  process.env.EMAIL_HOST = mailpitContainer.getHost();
-  process.env.EMAIL_PORT = mailpitContainer.getMappedPort(1025).toString();
   process.env.API_KEY = 'test-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
-  process.env.EMAIL_SERVICE_USERNAME = 'test@example.com';
-  process.env.EMAIL_SERVICE_PASSWORD = 'test-password';
-  delete process.env.EMAIL_SERVICE;
-
-  mailpitApiUrl = `http://${mailpitContainer.getHost()}:${mailpitContainer.getMappedPort(8025)}`;
+  process.env.NOTIFICATION_TRANSPORT = 'http';
+  process.env.NOTIFICATION_SERVICE_URL = 'http://localhost:9999';
 
   const migrationPool = new pg.Pool({ connectionString: dbUrl });
   const migrationDb = drizzle({ client: migrationPool });
@@ -103,10 +99,6 @@ beforeAll(async () => {
   const deps = await import('../../src/dependencies-container.js');
   shutdownDependencies = deps.shutdownDependencies;
 
-  deps.emailWorker.worker
-    .run()
-    .catch((err) => console.error('Worker run error:', err));
-
   await deps.initNotificationRabbitMQ();
 }, 120000);
 
@@ -115,19 +107,18 @@ afterAll(async () => {
   if (pgContainer) await pgContainer.stop();
   if (redisContainer) await redisContainer.stop();
   if (rabbitmqContainer) await rabbitmqContainer.stop();
-  if (mailpitContainer) await mailpitContainer.stop();
   jest.restoreAllMocks();
 });
 
 beforeEach(async () => {
+  jest.clearAllMocks();
   await drizzleClient.execute(
     sql`TRUNCATE TABLE subscriptions, subscription_repositories, subscribe_sagas RESTART IDENTITY CASCADE`,
   );
-  await fetch(`${mailpitApiUrl}/api/v1/messages`, { method: 'DELETE' });
 });
 
 describe('ReleaseDetectedWorker Integration Tests', () => {
-  it('sends notification email to confirmed subscriber', async () => {
+  it('calls dispatchToSubscribers for confirmed subscriber', async () => {
     const [repo] = await drizzleClient
       .insert(subscriptionRepositories)
       .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
@@ -146,14 +137,18 @@ describe('ReleaseDetectedWorker Integration Tests', () => {
       releaseTag: 'v1.2.0',
     });
 
-    const mailData = await waitForEmails(1);
+    await waitForDispatch();
 
-    expect(mailData.total).toBe(1);
-    expect(mailData.messages[0]!.Subject).toBe('New Release: owner/repo v1.2.0');
-    expect(mailData.messages[0]!.To[0]!.Address).toBe('confirmed@example.com');
+    expect(mockDispatchToSubscribers).toHaveBeenCalledWith(
+      expect.arrayContaining<SubscriberInfo>([
+        expect.objectContaining({ email: 'confirmed@example.com' }),
+      ]),
+      'owner/repo',
+      'v1.2.0',
+    );
   }, 30000);
 
-  it('sends no email when subscriber is unconfirmed', async () => {
+  it('does not call dispatchToSubscribers when subscriber is unconfirmed', async () => {
     const [repo] = await drizzleClient
       .insert(subscriptionRepositories)
       .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/repo' })
@@ -174,12 +169,10 @@ describe('ReleaseDetectedWorker Integration Tests', () => {
 
     await new Promise((r) => setTimeout(r, 3000));
 
-    const res = await fetch(`${mailpitApiUrl}/api/v1/messages`);
-    const mailData = (await res.json()) as MailpitMessagesResponse;
-    expect(mailData.total).toBe(0);
+    expect(mockDispatchToSubscribers).not.toHaveBeenCalled();
   }, 15000);
 
-  it('sends notification emails to all confirmed subscribers', async () => {
+  it('calls dispatchToSubscribers with all confirmed subscribers', async () => {
     const [repo] = await drizzleClient
       .insert(subscriptionRepositories)
       .values({ id: '00000000-0000-0000-0000-000000000001', name: 'owner/multi-repo' })
@@ -201,13 +194,14 @@ describe('ReleaseDetectedWorker Integration Tests', () => {
       releaseTag: 'v3.0.0',
     });
 
-    const mailData = await waitForEmails(3);
+    await waitForDispatch();
 
-    expect(mailData.total).toBe(3);
-    const recipients = mailData.messages.map((m) => m.To[0]!.Address).sort();
-    expect(recipients).toEqual([...emails].sort());
-    for (const msg of mailData.messages) {
-      expect(msg.Subject).toBe('New Release: owner/multi-repo v3.0.0');
-    }
+    expect(mockDispatchToSubscribers).toHaveBeenCalledWith(
+      expect.arrayContaining(
+        emails.map((email) => expect.objectContaining({ email })),
+      ),
+      'owner/multi-repo',
+      'v3.0.0',
+    );
   }, 30000);
 });

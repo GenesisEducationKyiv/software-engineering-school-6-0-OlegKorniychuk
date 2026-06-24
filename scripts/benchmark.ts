@@ -1,12 +1,35 @@
 import autocannon from 'autocannon';
-import { createClient } from '@connectrpc/connect';
-import { createGrpcTransport } from '@connectrpc/connect-node';
-import { NotificationService } from '../src/generated/notification/v1/notification_pb.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { resolve } from 'node:path';
+import { readFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+
+const execFileAsync = promisify(execFile);
 
 const HTTP_URL = process.env['HTTP_URL'] ?? 'http://localhost:3002';
-const GRPC_URL = process.env['GRPC_URL'] ?? 'http://localhost:50051';
+const GRPC_ADDR = process.env['GRPC_ADDR'] ?? 'localhost:50051';
 const DURATION = 10;
 const CONNECTIONS = 10;
+
+const PROTO_PATH = resolve(
+  import.meta.dirname,
+  '../proto/notification/v1/notification.proto',
+);
+const PROTO_DIR = resolve(import.meta.dirname, '../proto');
+const GHZ_BIN = resolve(import.meta.dirname, '../node_modules/.bin/ghz');
+
+interface GhzResult {
+  count: number;
+  total: number;
+  average: number;
+  fastest: number;
+  slowest: number;
+  rps: number;
+  errorDistribution: Record<string, number>;
+  statusCodeDistribution: Record<string, number>;
+  latencyDistribution: Array<{ percentage: number; latency: number }>;
+}
 
 async function benchmarkHttp(): Promise<autocannon.Result> {
   return new Promise((resolve, reject) => {
@@ -28,49 +51,31 @@ async function benchmarkHttp(): Promise<autocannon.Result> {
   });
 }
 
-async function benchmarkGrpc(): Promise<{
-  requests: number;
-  duration: number;
-  errors: number;
-  p50: number;
-  p99: number;
-}> {
-  const transport = createGrpcTransport({ baseUrl: GRPC_URL });
-  const client = createClient(NotificationService, transport);
-
-  const start = Date.now();
-  const deadline = start + DURATION * 1000;
-  let requests = 0;
-  let errors = 0;
-  const latencies: number[] = [];
-
-  while (Date.now() < deadline) {
-    const batch = Array.from({ length: CONNECTIONS }, async () => {
-      const t0 = Date.now();
-      try {
-        await client.queueConfirmationEmail({
-          email: 'bench@test.com',
-          token: 'bench-token',
-        });
-        requests++;
-        latencies.push(Date.now() - t0);
-      } catch {
-        errors++;
-      }
-    });
-    await Promise.all(batch);
-  }
-
-  const duration = (Date.now() - start) / 1000;
-  latencies.sort((a, b) => a - b);
-  const p50 = latencies[Math.floor(latencies.length * 0.5)] ?? 0;
-  const p99 = latencies[Math.floor(latencies.length * 0.99)] ?? 0;
-
-  return { requests, duration, errors, p50, p99 };
+async function benchmarkGrpc(): Promise<GhzResult> {
+  const outFile = resolve(tmpdir(), `ghz-result-${Date.now()}.json`);
+  await execFileAsync(GHZ_BIN, [
+    '--proto', PROTO_PATH,
+    '--import-paths', PROTO_DIR,
+    '--call', 'notification.v1.NotificationService.QueueConfirmationEmail',
+    '--data', JSON.stringify({ email: 'bench@test.com', token: 'bench-token' }),
+    `--duration=${DURATION}s`,
+    `--concurrency=${CONNECTIONS}`,
+    '--format=json',
+    `--output=${outFile}`,
+    '--insecure',
+    GRPC_ADDR,
+  ]);
+  const raw = await readFile(outFile, 'utf8');
+  await unlink(outFile).catch(() => undefined);
+  return JSON.parse(raw) as GhzResult;
 }
 
-function printHttpResult(label: string, r: autocannon.Result): void {
-  console.log(`\n--- ${label} ---`);
+function nsToMs(ns: number): string {
+  return (ns / 1_000_000).toFixed(2);
+}
+
+function printHttpResult(r: autocannon.Result): void {
+  console.log('\n--- HTTP REST (autocannon, HTTP/1.1) ---');
   console.log(`  Requests/sec : ${r.requests.average.toFixed(0)}`);
   console.log(`  Throughput   : ${(r.throughput.average / 1024).toFixed(1)} KB/s`);
   console.log(`  Latency p50  : ${r.latency.p50} ms`);
@@ -78,38 +83,37 @@ function printHttpResult(label: string, r: autocannon.Result): void {
   console.log(`  Errors       : ${r.errors}`);
 }
 
-function printGrpcResult(label: string, r: {
-  requests: number;
-  duration: number;
-  errors: number;
-  p50: number;
-  p99: number;
-}): void {
-  console.log(`\n--- ${label} ---`);
-  console.log(`  Requests/sec : ${(r.requests / r.duration).toFixed(0)}`);
-  console.log(`  Total reqs   : ${r.requests}`);
-  console.log(`  Latency p50  : ${r.p50} ms`);
-  console.log(`  Latency p99  : ${r.p99} ms`);
-  console.log(`  Errors       : ${r.errors}`);
+function printGrpcResult(r: GhzResult): void {
+  const p50 = r.latencyDistribution.find((d) => d.percentage === 50);
+  const p99 = r.latencyDistribution.find((d) => d.percentage === 99);
+  const errors = Object.values(r.errorDistribution).reduce((s, v) => s + v, 0);
+
+  console.log('\n--- gRPC ConnectRPC (ghz, HTTP/2) ---');
+  console.log(`  Requests/sec : ${r.rps.toFixed(0)}`);
+  console.log(`  Total reqs   : ${r.count}`);
+  console.log(`  Latency avg  : ${nsToMs(r.average)} ms`);
+  console.log(`  Latency p50  : ${nsToMs(p50?.latency ?? 0)} ms`);
+  console.log(`  Latency p99  : ${nsToMs(p99?.latency ?? 0)} ms`);
+  console.log(`  Errors       : ${errors}`);
 }
 
 async function run(): Promise<void> {
-  console.log('Benchmark: HTTP (REST) vs gRPC (ConnectRPC)');
-  console.log(`Duration: ${DURATION}s | Connections: ${CONNECTIONS}`);
+  console.log('Benchmark: HTTP (REST) vs gRPC (ConnectRPC + ghz)');
+  console.log(`Duration: ${DURATION}s | Concurrency: ${CONNECTIONS}`);
   console.log(`HTTP target  : ${HTTP_URL}`);
-  console.log(`gRPC target  : ${GRPC_URL}`);
+  console.log(`gRPC target  : ${GRPC_ADDR}`);
 
   console.log('\nRunning HTTP benchmark...');
   const httpResult = await benchmarkHttp();
 
-  console.log('\nRunning gRPC benchmark...');
+  console.log('Running gRPC benchmark (ghz)...');
   const grpcResult = await benchmarkGrpc();
 
-  printHttpResult('HTTP REST (autocannon)', httpResult);
-  printGrpcResult('gRPC ConnectRPC (custom loop)', grpcResult);
+  printHttpResult(httpResult);
+  printGrpcResult(grpcResult);
 
   const httpRps = httpResult.requests.average;
-  const grpcRps = grpcResult.requests / grpcResult.duration;
+  const grpcRps = grpcResult.rps;
   const diff = ((grpcRps - httpRps) / httpRps) * 100;
   console.log(`\nΔ gRPC vs HTTP: ${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`);
 }

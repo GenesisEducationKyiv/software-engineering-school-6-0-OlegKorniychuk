@@ -18,7 +18,8 @@
     "test:e2e": "cross-env NODE_ENV=test playwright test",
     "lint": "eslint 'src/**/*.{ts,tsx}'",
     "format": "prettier --check 'src/**/*.{ts,tsx,json,md}'",
-    "proto:gen": "buf generate"
+    "proto:gen": "buf generate",
+    "benchmark": "tsx scripts/benchmark.ts"
   },
   "repository": {
     "type": "git",

@@ -85,6 +85,7 @@ beforeAll(async () => {
   process.env.API_KEY = 'test-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
+  process.env.NOTIFICATION_TRANSPORT = 'http';
   process.env.NOTIFICATION_SERVICE_URL = 'http://localhost:9999';
 
   const migrationPool = new pg.Pool({ connectionString: dbUrl });

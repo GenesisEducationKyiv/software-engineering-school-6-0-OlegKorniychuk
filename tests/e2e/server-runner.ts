@@ -40,6 +40,7 @@ async function start() {
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
   process.env.PORT = String(MAIN_APP_PORT);
+  process.env.NOTIFICATION_TRANSPORT = 'http';
   process.env.NOTIFICATION_SERVICE_URL = `http://localhost:${NOTIFICATION_PORT}`;
   process.env.MAILPIT_API_URL = mailpitApiUrl;
 
@@ -88,6 +89,11 @@ async function start() {
     ),
   );
   const notificationServer = notificationApp.listen(NOTIFICATION_PORT);
+
+  // Each service owns its own prom-client registry in production (separate processes).
+  // In e2e both run in-process, so clear the shared registry between imports.
+  const { register } = await import('prom-client');
+  register.clear();
 
   // Start main app
   const deps = await import('../../src/dependencies-container.js');

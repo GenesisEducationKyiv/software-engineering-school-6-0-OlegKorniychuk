@@ -60,6 +60,7 @@ beforeAll(async () => {
   process.env.API_KEY = 'test-api-key';
   process.env.NOTIFICATION_TOKEN_SECRET = 'test-secret';
   process.env.GITHUB_TOKEN = 'test-github-token';
+  process.env.NOTIFICATION_TRANSPORT = 'http';
   process.env.NOTIFICATION_SERVICE_URL = 'http://localhost:9999';
   process.env.RABBITMQ_URL = `amqp://guest:guest@${rabbitmqContainer.getHost()}:${rabbitmqContainer.getMappedPort(5672)}`;
 

@@ -74,11 +74,13 @@ export class ReleaseDetectedWorker {
     const subscribers =
       await this.subscription.getConfirmedSubscribersWithTokens(repoId);
 
-    await this.notification.dispatchToSubscribers(
-      subscribers,
-      repoName,
-      releaseTag,
-    );
+    if (subscribers.length > 0) {
+      await this.notification.dispatchToSubscribers(
+        subscribers,
+        repoName,
+        releaseTag,
+      );
+    }
 
     this.logger.info(
       { repoName, releaseTag, count: subscribers.length },

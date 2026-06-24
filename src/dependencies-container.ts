@@ -14,6 +14,7 @@ import { RepoCommandPublisher } from './modules/subscription/saga/repo-command.p
 import { RepoEventsConsumer } from './modules/subscription/saga/repo-events.consumer.js';
 import { CacheServiceImplementation } from './shared/cache/cache.service.js';
 import { HttpNotificationFacade } from './modules/notification/http-notification-facade.js';
+import { GrpcNotificationFacade } from './modules/notification/grpc-notification-facade.js';
 import { ReleaseDetectedWorker } from './modules/notification/release-detected-worker.js';
 import { NotificationTokensServiceImplementation } from './modules/subscription/tokens/notification-tokens.service.js';
 
@@ -37,9 +38,10 @@ export const cacheService = new CacheServiceImplementation(
 );
 
 // Notification
-const notificationFacade = new HttpNotificationFacade(
-  env.NOTIFICATION_SERVICE_URL,
-);
+const notificationFacade =
+  env.NOTIFICATION_TRANSPORT === 'grpc'
+    ? new GrpcNotificationFacade(env.NOTIFICATION_GRPC_URL)
+    : new HttpNotificationFacade(env.NOTIFICATION_SERVICE_URL);
 
 // Saga
 const sagaRepository = new SubscribeSagaRepositoryImplementation(drizzleClient);
